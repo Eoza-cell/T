@@ -1,4 +1,5 @@
 const { startBot } = require('./src/bot');
+const server = require('./server');
 
 console.log(`
 ╔═══════════════════════════════════════╗
@@ -11,7 +12,7 @@ console.log(`
 ╚═══════════════════════════════════════╝
 `);
 
-console.log('🚀 Démarrage du bot...\n');
+console.log('🚀 Démarrage du serveur web et du bot...\n');
 
 startBot().catch(err => {
   console.error('❌ Erreur fatale:', err);

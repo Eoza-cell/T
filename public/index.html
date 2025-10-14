@@ -1,0 +1,250 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏴‍☠️ One Piece RPG Bot - Connexion</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2rem;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .status.waiting {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .qr-container {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+        }
+
+        #qrCode {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .loading {
+            color: #667eea;
+            font-size: 1.2rem;
+            margin: 20px 0;
+        }
+
+        .instructions {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+            border-radius: 5px;
+        }
+
+        .instructions ol {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+
+        .instructions li {
+            margin: 8px 0;
+            color: #333;
+        }
+
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: all 0.3s;
+        }
+
+        .refresh-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .footer {
+            margin-top: 30px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏴‍☠️ One Piece RPG Bot</h1>
+        <p class="subtitle">Connexion WhatsApp</p>
+        
+        <div id="status" class="status waiting">
+            ⏳ En attente de scan...
+        </div>
+
+        <div class="qr-container">
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                Chargement du QR code...
+            </div>
+            <img id="qrCode" style="display: none;" alt="QR Code WhatsApp">
+        </div>
+
+        <div class="instructions">
+            <strong>📱 Instructions :</strong>
+            <ol>
+                <li>Ouvre WhatsApp sur ton téléphone</li>
+                <li>Va dans <strong>Paramètres</strong> → <strong>Appareils connectés</strong></li>
+                <li>Appuie sur <strong>Connecter un appareil</strong></li>
+                <li>Scanne le QR code ci-dessus</li>
+                <li>Attends la confirmation de connexion</li>
+            </ol>
+        </div>
+
+        <button class="refresh-btn" onclick="refreshQR()">🔄 Actualiser le QR code</button>
+
+        <div class="footer">
+            ⚡ Le QR code se rafraîchit automatiquement toutes les 3 secondes
+        </div>
+    </div>
+
+    <script>
+        let refreshInterval;
+
+        async function loadQRCode() {
+            try {
+                const response = await fetch('/qr-code');
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    
+                    document.getElementById('qrCode').src = url;
+                    document.getElementById('qrCode').style.display = 'block';
+                    document.getElementById('loading').style.display = 'none';
+                } else {
+                    document.getElementById('loading').innerHTML = 
+                        '<div class="spinner"></div>En attente du QR code...';
+                }
+            } catch (error) {
+                document.getElementById('loading').innerHTML = 
+                    '❌ Erreur de chargement. Le bot est-il démarré ?';
+            }
+        }
+
+        async function checkStatus() {
+            try {
+                const response = await fetch('/status');
+                const data = await response.json();
+                
+                const statusDiv = document.getElementById('status');
+                statusDiv.textContent = data.message;
+                
+                if (data.authenticated) {
+                    statusDiv.className = 'status connected';
+                    clearInterval(refreshInterval);
+                    document.getElementById('qrCode').style.display = 'none';
+                    document.getElementById('loading').innerHTML = 
+                        '✅ Bot connecté ! Vous pouvez fermer cette page.';
+                } else {
+                    statusDiv.className = 'status waiting';
+                }
+            } catch (error) {
+                console.error('Erreur status:', error);
+            }
+        }
+
+        function refreshQR() {
+            document.getElementById('qrCode').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('loading').innerHTML = 
+                '<div class="spinner"></div>Rechargement...';
+            
+            setTimeout(loadQRCode, 500);
+        }
+
+        // Chargement initial
+        loadQRCode();
+        checkStatus();
+
+        // Actualisation automatique
+        refreshInterval = setInterval(() => {
+            loadQRCode();
+            checkStatus();
+        }, 3000);
+    </script>
+</body>
+</html>
