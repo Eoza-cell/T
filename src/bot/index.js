@@ -24,10 +24,17 @@ async function startBot() {
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
-      console.log('\n🔐 Scanne ce QR code avec WhatsApp:\n');
-      qrcodeTerminal.generate(qr, { small: true });
+      console.log('\n╔════════════════════════════════════════╗');
+      console.log('║   🔐 QR CODE WHATSAPP DISPONIBLE     ║');
+      console.log('╚════════════════════════════════════════╝\n');
       
       try {
+        // Affichage dans le terminal
+        qrcodeTerminal.generate(qr, { small: true }, (qrcode) => {
+          console.log(qrcode);
+        });
+        
+        // Sauvegarde en fichier PNG
         const qrPath = path.join(__dirname, '../../qr-code.png');
         await QRCode.toFile(qrPath, qr, {
           errorCorrectionLevel: 'H',
@@ -36,23 +43,43 @@ async function startBot() {
           margin: 1,
           width: 512
         });
-        console.log(`\n📱 QR Code sauvegardé: ${qrPath}`);
-        console.log('💡 Ouvre ce fichier et scanne-le avec WhatsApp\n');
+        
+        console.log('\n📱 QR Code sauvegardé dans: qr-code.png');
+        console.log('💡 Télécharge ce fichier et scanne-le avec WhatsApp');
+        console.log('⚠️  ATTENTION: Le QR code expire après quelques secondes\n');
       } catch (err) {
-        console.error('Erreur lors de la création du QR code:', err);
+        console.error('❌ Erreur lors de la création du QR code:', err);
       }
     }
 
     if (connection === 'close') {
       const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+      const statusCode = lastDisconnect?.error?.output?.statusCode;
       
-      console.log('❌ Connexion fermée. Raison:', lastDisconnect?.error?.message);
-      console.log('📊 Code de statut:', lastDisconnect?.error?.output?.statusCode);
-      console.log('🔍 Erreur complète:', JSON.stringify(lastDisconnect?.error, null, 2));
+      console.log('\n❌ Connexion fermée');
+      console.log('📊 Code:', statusCode);
+      console.log('📝 Raison:', lastDisconnect?.error?.message);
       
-      if (shouldReconnect) {
+      // Erreur 405 = WhatsApp bloque les connexions cloud
+      if (statusCode === 405) {
+        console.log('\n╔════════════════════════════════════════════════════╗');
+        console.log('║  ⚠️  ERREUR 405: WhatsApp bloque Replit           ║');
+        console.log('╠════════════════════════════════════════════════════╣');
+        console.log('║  WhatsApp refuse les connexions depuis les        ║');
+        console.log('║  serveurs cloud comme Replit.                      ║');
+        console.log('║                                                    ║');
+        console.log('║  💡 SOLUTIONS:                                     ║');
+        console.log('║  1. Télécharge le code et exécute-le localement   ║');
+        console.log('║  2. Déploie sur un VPS personnel                  ║');
+        console.log('║  3. Utilise l\'option SSH de Replit (voir docs)    ║');
+        console.log('╚════════════════════════════════════════════════════╝\n');
+      }
+      
+      if (shouldReconnect && statusCode !== 405) {
         console.log('🔄 Reconnexion dans 5 secondes...');
         setTimeout(() => startBot(), 5000);
+      } else if (statusCode === 405) {
+        console.log('🛑 Arrêt des tentatives de reconnexion (erreur 405)');
       } else {
         console.log('🚪 Déconnecté. Relance le bot pour te reconnecter.');
       }

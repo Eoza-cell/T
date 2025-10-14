@@ -22,20 +22,19 @@ WhatsApp bloque les connexions depuis certains serveurs cloud (erreur 405). Pour
 
 ### Solutions recommandées :
 
-1. **Utiliser Telegram à la place** (recommandé)
-   - API officielle et stable
-   - Aucune restriction de connexion
-   - Plus de fonctionnalités (boutons, menus interactifs)
-   
-2. **Déployer sur un VPS** (DigitalOcean, Linode, etc.)
-   - Télécharger le code
-   - Installer Node.js
-   - Exécuter `npm install && npm start`
+1. **Utiliser le SSH de Replit** ⭐ (recommandé pour rester sur Replit)
+   - Configure le SSH depuis les paramètres de ton compte Replit
+   - Connecte-toi depuis ta machine locale via SSH
+   - Le bot s'exécutera depuis ta connexion locale
+   - Voir la [documentation SSH de Replit](https://docs.replit.com/programming-ide/using-ssh-on-replit)
+
+2. **Déployer avec Replit Deployments**
+   - Utilise les déploiements Replit pour héberger le bot
+   - Les déploiements ont des IP dédiées non bloquées
    
 3. **Exécuter en local**
-   - Cloner le projet
-   - `npm install`
-   - `npm start`
+   - Télécharge le code depuis Replit
+   - Sur ta machine : `npm install && npm start`
    - Scanner le QR code avec WhatsApp
 
 ## 🎮 Système de jeu
