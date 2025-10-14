@@ -2,6 +2,18 @@
 
 Bot WhatsApp complet basé sur l'univers de One Piece avec un système RPG avancé.
 
+## ✨ Fonctionnalités récentes
+
+### 🔐 QR Code amélioré
+- **Affichage dans le terminal** pour un scan rapide
+- **Fichier PNG généré** (`qr-code.png`) pour un meilleur scan
+- Résolution optimisée (512x512px) avec correction d'erreur élevée
+
+### 🎬 Menu animé
+- Le menu d'aide (`!aide`) envoie maintenant un **GIF animé**
+- Interface visuelle attractive inspirée de One Piece
+- Caption complète avec toutes les commandes
+
 ## ⚠️ Important : Limitations de l'environnement
 
 **Le bot est fonctionnel mais rencontre des problèmes de connexion dans l'environnement Replit.**

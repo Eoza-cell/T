@@ -4,3 +4,4 @@ auth_info/
 .env
 .DS_Store
 src/data/players.json
+qr-code.png

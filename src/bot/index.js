@@ -1,7 +1,10 @@
 const makeWASocket = require('@whiskeysockets/baileys').default;
 const { useMultiFileAuthState, DisconnectReason, Browsers } = require('@whiskeysockets/baileys');
-const qrcode = require('qrcode-terminal');
+const QRCode = require('qrcode');
+const qrcodeTerminal = require('qrcode-terminal');
 const pino = require('pino');
+const fs = require('fs-extra');
+const path = require('path');
 const { handleIncomingMessage } = require('./messageHandler');
 const { startEnergyRegeneration } = require('../game/energySystem');
 
@@ -22,7 +25,22 @@ async function startBot() {
 
     if (qr) {
       console.log('\n🔐 Scanne ce QR code avec WhatsApp:\n');
-      qrcode.generate(qr, { small: true });
+      qrcodeTerminal.generate(qr, { small: true });
+      
+      try {
+        const qrPath = path.join(__dirname, '../../qr-code.png');
+        await QRCode.toFile(qrPath, qr, {
+          errorCorrectionLevel: 'H',
+          type: 'png',
+          quality: 0.95,
+          margin: 1,
+          width: 512
+        });
+        console.log(`\n📱 QR Code sauvegardé: ${qrPath}`);
+        console.log('💡 Ouvre ce fichier et scanne-le avec WhatsApp\n');
+      } catch (err) {
+        console.error('Erreur lors de la création du QR code:', err);
+      }
     }
 
     if (connection === 'close') {

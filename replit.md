@@ -183,7 +183,13 @@ Aucune requise pour le moment (session Baileys auto-gérée)
 
 ## Modifications récentes
 
-**14/10/2025**
+**14/10/2025 - Version 2.0**
+- ✅ **QR Code amélioré** : Génération PNG (512x512) en plus du terminal
+- ✅ **Menu animé GIF** : Intégration vidéo convertie en GIF pour !aide
+- ✅ **Gestion média** : Support complet des GIFs et images dans les réponses
+- ✅ Amélioration du messageHandler pour médias
+
+**14/10/2025 - Version 1.0**
 - ✅ Création structure complète du projet
 - ✅ Implémentation système RPG complet
 - ✅ Système de commandes interactif

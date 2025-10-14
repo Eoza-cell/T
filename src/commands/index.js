@@ -4,6 +4,8 @@ const { initCombat, executeAttack, formatCombatStatus, getCombat, getPlayerActiv
 const { getEnergyStatus } = require('../game/energySystem');
 const { formatPlayerStats } = require('../utils/helpers');
 const { RACES, ALIGNMENTS, STYLES, METIERS, ZONES } = require('../utils/constants');
+const path = require('path');
+const fs = require('fs-extra');
 
 async function handleCommand(message, sender) {
   const text = message.trim().toLowerCase();
@@ -72,8 +74,11 @@ async function handleCommand(message, sender) {
   }
 }
 
-function getHelpMessage() {
-  return `
+async function getHelpMessage() {
+  const menuGifPath = path.join(__dirname, '../../attached_assets/menu.gif');
+  const hasGif = await fs.pathExists(menuGifPath);
+  
+  const caption = `
 🏴‍☠️ *BOT WHATSAPP - ONE PIECE RPG* ⚓
 
 *COMMANDES DE BASE:*
@@ -104,6 +109,17 @@ function getHelpMessage() {
 ━━━━━━━━━━━━━━━━━━━━
 *Exemple:* !creer Luffy HUMAIN PIRATE
 `.trim();
+
+  if (hasGif) {
+    return {
+      type: 'media',
+      media: menuGifPath,
+      caption: caption,
+      mimetype: 'image/gif'
+    };
+  }
+  
+  return { type: 'text', text: caption };
 }
 
 async function handleCreateCharacter(args, sender) {

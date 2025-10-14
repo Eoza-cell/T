@@ -1,4 +1,5 @@
 const { handleCommand } = require('../commands');
+const fs = require('fs-extra');
 
 async function handleIncomingMessage(sock, message) {
   try {
@@ -22,8 +23,22 @@ async function handleIncomingMessage(sock, message) {
     const response = await handleCommand(text, sender);
 
     if (response) {
-      await sock.sendMessage(sender, { text: response });
-      console.log(`✅ Réponse envoyée à ${sender}`);
+      if (typeof response === 'object' && response.type === 'media') {
+        const mediaBuffer = await fs.readFile(response.media);
+        await sock.sendMessage(sender, {
+          video: mediaBuffer,
+          caption: response.caption,
+          gifPlayback: true,
+          mimetype: 'image/gif'
+        });
+        console.log(`✅ Média envoyé à ${sender}`);
+      } else if (typeof response === 'object' && response.type === 'text') {
+        await sock.sendMessage(sender, { text: response.text });
+        console.log(`✅ Réponse envoyée à ${sender}`);
+      } else if (typeof response === 'string') {
+        await sock.sendMessage(sender, { text: response });
+        console.log(`✅ Réponse envoyée à ${sender}`);
+      }
     }
 
   } catch (error) {
