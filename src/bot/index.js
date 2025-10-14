@@ -10,7 +10,6 @@ async function startBot() {
 
   const sock = makeWASocket({
     auth: state,
-    printQRInTerminal: true,
     logger: pino({ level: 'silent' }),
     browser: Browsers.ubuntu('Chrome'),
     generateHighQualityLinkPreview: true
@@ -30,10 +29,12 @@ async function startBot() {
       const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
       
       console.log('❌ Connexion fermée. Raison:', lastDisconnect?.error?.message);
+      console.log('📊 Code de statut:', lastDisconnect?.error?.output?.statusCode);
+      console.log('🔍 Erreur complète:', JSON.stringify(lastDisconnect?.error, null, 2));
       
       if (shouldReconnect) {
-        console.log('🔄 Reconnexion...');
-        setTimeout(() => startBot(), 3000);
+        console.log('🔄 Reconnexion dans 5 secondes...');
+        setTimeout(() => startBot(), 5000);
       } else {
         console.log('🚪 Déconnecté. Relance le bot pour te reconnecter.');
       }
