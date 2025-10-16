@@ -14,20 +14,12 @@ async function startBot() {
   const sock = makeWASocket({
     auth: state,
     logger: pino({ level: 'silent' }),
-    browser: Browsers.macOS('Desktop'),
     printQRInTerminal: false,
-    generateHighQualityLinkPreview: true,
-    syncFullHistory: false,
-    markOnlineOnConnect: true,
-    defaultQueryTimeoutMs: undefined,
-    connectTimeoutMs: 60000,
-    keepAliveIntervalMs: 30000,
-    emitOwnEvents: false,
-    fireInitQueries: true,
-    getMessage: async (key) => {
-      return {
-        conversation: 'hello'
-      }
+    browser: ['Ubuntu', 'Chrome', '128.0.6613.86'],
+    version: [2, 3000, 1025190524], 
+    getMessage: async key => {
+        console.log('⚠️ Message non déchiffré, retry demandé:', key);
+        return { conversation: '🔄 Réessaye d\'envoyer ton message' };
     }
   });
 
