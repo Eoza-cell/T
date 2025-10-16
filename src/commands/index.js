@@ -29,6 +29,7 @@ async function handleCommand(message, sender) {
       return await handleProfile(sender);
 
     case '!attributs':
+    case '!attribut':
     case '!add':
       return await handleAddAttribute(args, sender);
 
@@ -87,7 +88,7 @@ async function getHelpMessage() {
 !creer [nom] [race] [alignement] - Créer ton personnage
 !profil - Voir ton profil complet
 !stats - Voir tes statistiques
-!attributs [attr] [points] - Ajouter des points d'attributs
+!attribut [attr] [points] - Ajouter des points d'attributs
 !niveau - Progression vers le prochain niveau
 
 ⚔️ *COMBAT:*
@@ -151,7 +152,7 @@ Tape !races pour plus de détails sur les races.
 ${formatPlayerStats(result.player)}
 
 🎯 Tu commences avec 30 points d'attributs à répartir !
-Utilise: !attributs [attribut] [points]
+Utilise: !attribut [attribut] [points]
 
 Exemple: !attribut force 10
 
@@ -178,13 +179,13 @@ async function handleAddAttribute(args, sender) {
     return `
 ❌ *Commande incorrecte !*
 
-*Usage:* !attributs [attribut] [points]
+*Usage:* !attribut [attribut] [points]
 
 *Attributs:* force, vitesse, endurance, reflexe, intelligence, precision
 
 *Points disponibles:* ${player.attributePoints}
 
-*Exemple:* !attributs force 10
+*Exemple:* !attribut force 10
 `.trim();
   }
 
