@@ -28,9 +28,9 @@ Bot WhatsApp avec système RPG complet inspiré de l'univers One Piece. Le bot g
 
 ## Système de jeu implémenté
 
-### ✅ Fonctionnalités MVP complètes
+### ✅ Fonctionnalités complètes
 1. **Création de personnage**
-   - 6 races avec bonus uniques
+   - 6 races avec bonus uniques (HUMAIN avec choix d'attribut)
    - 4 alignements
    - 30 points d'attributs de départ
 
@@ -54,27 +54,51 @@ Bot WhatsApp avec système RPG complet inspiré de l'univers One Piece. Le bot g
    - Esquive et coups critiques
    - XP et Berrys en récompense
 
-6. **Économie de base**
-   - Système de Berrys
-   - 5 métiers avec revenus
-   - Gains par combat
+6. **⭐ Styles de combat** (Niveau 5+)
+   - 6 styles : Épéiste, Combattant, Tireur, Artiste Martial, Stratège, Fruit User
+   - Bonus permanents d'attributs
+   - Choix définitif et stratégique
 
-7. **Commandes complètes**
-   - 20+ commandes implémentées
-   - Menu d'aide interactif
-   - Système d'information
+7. **⭐ Système Haki complet**
+   - Haki Observation (Niv. 10 - 500 Berrys)
+   - Haki Armement (Niv. 15 - 1000 Berrys)
+   - Haki Royal (Niv. 20 - 2000 Berrys)
 
-### 🔮 Phase suivante (fonctionnalités avancées)
-- Base de données PostgreSQL
-- Système de Haki complet
-- Fruits du Démon
-- Styles de combat avec techniques
-- Métiers et crafting avancés
-- Zones géographiques avec navigation
-- Système d'équipage
-- Réputation et primes
-- Combats de boss scénarisés
-- Arbre de quêtes
+8. **⭐ Métiers & Économie**
+   - 5 métiers : Forgeron, Médecin, Cuisinier, Navigateur, Chasseur
+   - Salaires hebdomadaires
+   - Bonus spéciaux par métier
+
+9. **⭐ Boutique & Inventaire**
+   - Potions de soin (50 Berrys)
+   - Boost d'énergie (100 Berrys)
+   - Armes permanentes (500 Berrys)
+   - Fruits du Démon (5000 Berrys)
+   - Gestion inventaire complète
+
+10. **⭐ Zones & Voyages**
+    - 4 zones : East Blue, Grand Line, Nouveau Monde, Eaux Interdites
+    - Niveaux requis par zone
+    - Niveau de danger croissant
+
+11. **⭐ Classement & Réputation**
+    - Leaderboard (niveau, Berrys, primes)
+    - Système de réputation (5 niveaux)
+    - Stats de combat (victoires/défaites)
+    - Système de primes
+
+12. **Système de commandes**
+    - 30+ commandes implémentées
+    - Menu d'aide interactif complet
+    - Messages d'erreur clairs
+
+### 🔮 Phase suivante (fonctionnalités futures)
+- Base de données PostgreSQL (migration JSON)
+- Système de techniques par style
+- Arbre de quêtes scénarisées
+- Système d'équipage/guildes
+- Combats de boss événementiels
+- Crafting avancé
 
 ## Problème actuel
 
@@ -105,9 +129,11 @@ Raison: WhatsApp bloque les connexions cloud
 
 ```bash
 # Personnage
-!creer [nom] [race] [alignement]
-!profil
-!attributs [attr] [points]
+!creer [nom] [race] [alignement] [bonus_si_humain]
+!profil / !stats
+!attribut [attr] [points]
+!niveau
+!reputation
 
 # Combat
 !combat [@mention]
@@ -116,10 +142,24 @@ Raison: WhatsApp bloque les connexions cloud
 
 # Progression
 !entrainement [type]
-!niveau
+!style [type]        # Niveau 5+
+!haki [type]         # Observation/Armement/Royal
+!metier [type]
+
+# Économie
+!boutique
+!acheter [item]
+!inventaire
+
+# Voyage
+!voyager [zone]
+!zones
+
+# Social
+!classement [level/berrys/bounty]
 
 # Info
-!aide, !races, !alignements, !styles, !metiers, !zones
+!aide, !races, !alignements, !styles, !metiers
 ```
 
 ## Base de données
