@@ -70,14 +70,13 @@ async function handleCommand(message, sender) {
       return getZonesList();
 
     default:
-      return null;
+      return `❌ Commande inconnue: ${command}
+
+Tape *!aide* pour voir la liste des commandes disponibles.`;
   }
 }
 
 async function getHelpMessage() {
-  const menuGifPath = path.join(__dirname, '../../attached_assets/menu.gif');
-  const hasGif = await fs.pathExists(menuGifPath);
-  
   const caption = `
 🏴‍☠️ *BOT WHATSAPP - ONE PIECE RPG* ⚓
 
@@ -110,16 +109,7 @@ async function getHelpMessage() {
 *Exemple:* !creer Luffy HUMAIN PIRATE
 `.trim();
 
-  if (hasGif) {
-    return {
-      type: 'media',
-      media: menuGifPath,
-      caption: caption,
-      mimetype: 'image/gif'
-    };
-  }
-  
-  return { type: 'text', text: caption };
+  return caption;
 }
 
 async function handleCreateCharacter(args, sender) {
