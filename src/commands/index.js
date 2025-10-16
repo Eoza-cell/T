@@ -1,4 +1,4 @@
-const { getPlayer, createPlayer, playerExists, spendAttributePoints } = require('../game/playerManager');
+const { getPlayer, createPlayer, playerExists, spendAttributePoints, updatePlayer, getAllPlayers } = require('../game/playerManager');
 const { giveTrainingXP, getNextLevelInfo } = require('../game/xpSystem');
 const { initCombat, executeAttack, formatCombatStatus, getCombat, getPlayerActiveCombat } = require('../game/combatSystem');
 const { getEnergyStatus } = require('../game/energySystem');
@@ -70,6 +70,44 @@ async function handleCommand(message, sender) {
     case '!zones':
       return getZonesList();
 
+    case '!style':
+      return await handleStyle(args, sender);
+
+    case '!metier':
+    case '!job':
+      return await handleJob(args, sender);
+
+    case '!haki':
+      return await handleHaki(args, sender);
+
+    case '!inventaire':
+    case '!inventory':
+    case '!inv':
+      return await handleInventory(sender);
+
+    case '!boutique':
+    case '!shop':
+      return await handleShop(args, sender);
+
+    case '!acheter':
+    case '!buy':
+      return await handleBuy(args, sender);
+
+    case '!voyager':
+    case '!travel':
+      return await handleTravel(args, sender);
+
+    case '!classement':
+    case '!leaderboard':
+    case '!top':
+      return await handleLeaderboard(args);
+
+    case '!reputation':
+    case '!rep':
+    case '!prime':
+    case '!bounty':
+      return await handleReputation(sender);
+
     default:
       return `❌ Commande inconnue: ${command}
 
@@ -81,33 +119,44 @@ async function getHelpMessage() {
   const caption = `
 🏴‍☠️ *BOT WHATSAPP - ONE PIECE RPG* ⚓
 
-*COMMANDES DE BASE:*
+*COMMANDES:*
 ━━━━━━━━━━━━━━━━━━━━
 
 👤 *PERSONNAGE:*
-!creer [nom] [race] [alignement] - Créer ton personnage
-!profil - Voir ton profil complet
-!stats - Voir tes statistiques
-!attribut [attr] [points] - Ajouter des points d'attributs
-!niveau - Progression vers le prochain niveau
+!creer [nom] [race] [alignement] [bonus]
+!profil / !stats - Profil complet
+!attribut [attr] [pts] - Ajouter attributs
+!niveau - Progression XP
+!reputation - Réputation & prime
 
 ⚔️ *COMBAT:*
-!combat [@mention] - Défier un joueur
-!attaque - Attaquer pendant un combat
-!energie - Voir ton énergie
+!combat [@mention] - Défier
+!attaque - Attaquer
+!energie - Voir énergie
 
 💪 *PROGRESSION:*
-!entrainement [type] - S'entraîner (force/vitesse/endurance/reflexe/intelligence/precision)
+!entrainement [type] - S'entraîner
+!style [type] - Choisir style (Niv.5+)
+!haki [type] - Débloquer Haki
+!metier [type] - Choisir métier
 
-📚 *INFORMATIONS:*
-!races - Liste des races
-!alignements - Liste des alignements
-!styles - Liste des styles de combat (niveau 5+)
-!metiers - Liste des métiers
+🏪 *ÉCONOMIE:*
+!boutique - Voir articles
+!acheter [item] - Acheter
+!inventaire - Ton inventaire
+
+🗺️ *VOYAGE:*
+!voyager [zone] - Changer de zone
 !zones - Liste des zones
 
+📊 *SOCIAL:*
+!classement [type] - Top joueurs
+
+📚 *INFOS:*
+!races !alignements !styles !metiers
+
 ━━━━━━━━━━━━━━━━━━━━
-*Exemple:* !creer Luffy HUMAIN PIRATE
+*Exemple:* !creer Luffy HUMAIN PIRATE force
 `.trim();
 
   return caption;
@@ -122,7 +171,7 @@ async function handleCreateCharacter(args, sender) {
     return `
 ❌ *Commande incorrecte !*
 
-*Usage:* !creer [nom] [race] [alignement]
+*Usage:* !creer [nom] [race] [alignement] [bonus_attribut_si_humain]
 
 *Races disponibles:*
 HUMAIN, HOMME_POISSON, GEANT, MINK, SKYPEIEN, CYBORG
@@ -130,7 +179,10 @@ HUMAIN, HOMME_POISSON, GEANT, MINK, SKYPEIEN, CYBORG
 *Alignements disponibles:*
 PIRATE, MARINE, REVOLUTIONNAIRE, CIVIL
 
-*Exemple:* !creer Luffy HUMAIN PIRATE
+*Exemple:* !creer Luffy HUMAIN PIRATE force
+*Exemple:* !creer Zoro HUMAIN PIRATE vitesse
+
+⚠️ Si HUMAIN : ajoute force/vitesse/endurance/reflexe/intelligence/precision
 
 Tape !races pour plus de détails sur les races.
 `.trim();
@@ -139,15 +191,39 @@ Tape !races pour plus de détails sur les races.
   const name = args[1];
   const race = args[2].toUpperCase();
   const alignment = args[3].toUpperCase();
+  const bonusAttr = args[4] ? args[4].toLowerCase() : null;
 
-  const result = await createPlayer(sender, name, race, alignment);
+  if (race === 'HUMAIN' && !bonusAttr) {
+    return `
+❌ *Race HUMAIN nécessite un choix de bonus !*
+
+*Usage:* !creer ${name} HUMAIN ${alignment} [attribut]
+
+*Attributs disponibles:*
+force, vitesse, endurance, reflexe, intelligence, precision
+
+*Exemple:* !creer ${name} HUMAIN ${alignment} force
+`.trim();
+  }
+
+  if (race === 'HUMAIN' && bonusAttr && !['force', 'vitesse', 'endurance', 'reflexe', 'intelligence', 'precision'].includes(bonusAttr)) {
+    return '❌ Attribut bonus invalide ! Choisis: force, vitesse, endurance, reflexe, intelligence ou precision';
+  }
+
+  const result = await createPlayer(sender, name, race, alignment, bonusAttr);
 
   if (!result.success) {
     return `❌ ${result.message}`;
   }
 
+  let bonusMsg = '';
+  if (race === 'HUMAIN' && bonusAttr) {
+    bonusMsg = `\n🎁 Bonus HUMAIN: +5 ${bonusAttr}`;
+  }
+
   return `
 ✅ *Personnage créé avec succès !*
+${bonusMsg}
 
 ${formatPlayerStats(result.player)}
 
@@ -415,6 +491,344 @@ function getZonesList() {
   });
 
   return list.trim();
+}
+
+async function handleStyle(args, sender) {
+  const player = await getPlayer(sender);
+  if (!player) return '⚠️ Tu n\'as pas encore de personnage !';
+
+  if (player.level < 5) {
+    return `❌ Les styles de combat se débloquent au niveau 5 !\n\n*Niveau actuel:* ${player.level}\n*Niveau requis:* 5`;
+  }
+
+  if (player.style) {
+    return `⚠️ Tu as déjà choisi le style: *${player.style}*\n\nCe choix est définitif !`;
+  }
+
+  if (args.length < 2) {
+    let styleList = '⚔️ *CHOISIS TON STYLE DE COMBAT:*\n\n';
+    Object.entries(STYLES).forEach(([key, style]) => {
+      styleList += `*${key}* - ${style.name}\n${style.description}\nBonus: ${JSON.stringify(style.bonus)}\n\n`;
+    });
+    styleList += '\n*Usage:* !style [EPEISTE/COMBATTANT/TIREUR/etc]';
+    return styleList.trim();
+  }
+
+  const styleChoice = args[1].toUpperCase();
+  const styleData = STYLES[styleChoice];
+
+  if (!styleData) {
+    return '❌ Style invalide ! Tape !styles pour voir la liste.';
+  }
+
+  player.style = styleData.name;
+  Object.entries(styleData.bonus).forEach(([attr, value]) => {
+    player.attributes[attr] = (player.attributes[attr] || 0) + value;
+  });
+
+  await updatePlayer(sender, player);
+
+  return `
+✅ *Style choisi: ${styleData.name}*
+
+${styleData.description}
+
+*Bonus appliqués:*
+${Object.entries(styleData.bonus).map(([k, v]) => `• ${k}: ${v > 0 ? '+' : ''}${v}`).join('\n')}
+
+${formatPlayerStats(player)}
+`.trim();
+}
+
+async function handleJob(args, sender) {
+  const player = await getPlayer(sender);
+  if (!player) return '⚠️ Tu n\'as pas encore de personnage !';
+
+  if (args.length < 2) {
+    let jobList = '💼 *CHOISIS TON MÉTIER:*\n\n';
+    Object.entries(METIERS).forEach(([key, job]) => {
+      jobList += `*${key}* - ${job.name}\n${job.description}\nSalaire: ${job.salary} Berrys/sem\n\n`;
+    });
+    jobList += '\n*Usage:* !metier [FORGERON/MEDECIN/etc]';
+    return jobList.trim();
+  }
+
+  const jobChoice = args[1].toUpperCase();
+  const jobData = METIERS[jobChoice];
+
+  if (!jobData) {
+    return '❌ Métier invalide ! Tape !metiers pour voir la liste.';
+  }
+
+  player.job = jobData.name;
+  await updatePlayer(sender, player);
+
+  return `
+✅ *Métier choisi: ${jobData.name}*
+
+${jobData.description}
+
+💰 *Salaire:* ${jobData.salary} Berrys/semaine
+🎁 *Bonus:* ${JSON.stringify(jobData.bonus)}
+`.trim();
+}
+
+async function handleHaki(args, sender) {
+  const player = await getPlayer(sender);
+  if (!player) return '⚠️ Tu n\'as pas encore de personnage !';
+
+  if (args.length < 2) {
+    return `
+🌀 *TON HAKI:*
+
+*Observation:* ${player.haki.observation ? '✅ Débloqué' : '🔒 Niveau 10 requis'}
+*Armement:* ${player.haki.armement ? '✅ Débloqué' : '🔒 Niveau 15 requis'}
+*Royal:* ${player.haki.royal ? '✅ Débloqué' : '🔒 Niveau 20 requis'}
+
+*Usage:*
+!haki observation - Débloquer (Niv. 10, 500 Berrys)
+!haki armement - Débloquer (Niv. 15, 1000 Berrys)
+!haki royal - Débloquer (Niv. 20, 2000 Berrys)
+`.trim();
+  }
+
+  const hakiType = args[1].toLowerCase();
+  const requirements = {
+    observation: { level: 10, cost: 500 },
+    armement: { level: 15, cost: 1000 },
+    royal: { level: 20, cost: 2000 }
+  };
+
+  if (!requirements[hakiType]) {
+    return '❌ Type de Haki invalide ! (observation, armement, royal)';
+  }
+
+  if (player.haki[hakiType]) {
+    return `⚠️ Tu possèdes déjà le Haki ${hakiType} !`;
+  }
+
+  const req = requirements[hakiType];
+  if (player.level < req.level) {
+    return `❌ Niveau ${req.level} requis ! (Actuel: ${player.level})`;
+  }
+
+  if (player.berrys < req.cost) {
+    return `❌ ${req.cost} Berrys requis ! (Actuel: ${player.berrys})`;
+  }
+
+  player.haki[hakiType] = true;
+  player.berrys -= req.cost;
+  await updatePlayer(sender, player);
+
+  return `
+✅ *Haki ${hakiType.toUpperCase()} débloqué !*
+
+🌀 Tu maîtrises maintenant ce pouvoir !
+💰 -${req.cost} Berrys
+`.trim();
+}
+
+async function handleInventory(sender) {
+  const player = await getPlayer(sender);
+  if (!player) return '⚠️ Tu n\'as pas encore de personnage !';
+
+  if (!player.inventory || player.inventory.length === 0) {
+    return '🎒 *Inventaire vide*\n\nUtilise !boutique pour acheter des objets.';
+  }
+
+  let inv = '🎒 *TON INVENTAIRE:*\n\n';
+  player.inventory.forEach((item, index) => {
+    inv += `${index + 1}. ${item.name} x${item.quantity}\n   ${item.description}\n\n`;
+  });
+
+  return inv.trim();
+}
+
+async function handleShop(args, sender) {
+  const player = await getPlayer(sender);
+  if (!player) return '⚠️ Tu n\'as pas encore de personnage !';
+
+  const shopItems = {
+    potion: { name: 'Potion de soin', price: 50, effect: '+50 HP', description: 'Restaure 50 HP' },
+    boost: { name: 'Boost d\'énergie', price: 100, effect: '+20 énergie', description: 'Restaure 20 énergie' },
+    arme: { name: 'Arme +10 Force', price: 500, effect: '+10 Force', description: 'Augmente Force de 10' },
+    fruit: { name: 'Fruit du Démon (aléatoire)', price: 5000, effect: 'Pouvoir', description: 'Fruit aléatoire' }
+  };
+
+  let shop = `
+🏪 *BOUTIQUE* 🏪
+
+💰 *Tes Berrys:* ${player.berrys}
+
+*Articles disponibles:*
+
+`;
+
+  Object.entries(shopItems).forEach(([key, item]) => {
+    shop += `📦 *${item.name}* - ${item.price} Berrys\n   ${item.description}\n   !acheter ${key}\n\n`;
+  });
+
+  return shop.trim();
+}
+
+async function handleBuy(args, sender) {
+  const player = await getPlayer(sender);
+  if (!player) return '⚠️ Tu n\'as pas encore de personnage !';
+
+  if (args.length < 2) {
+    return '❌ Utilise: !acheter [item]\n\nTape !boutique pour voir les articles.';
+  }
+
+  const shopItems = {
+    potion: { name: 'Potion de soin', price: 50, effect: 'heal', value: 50, description: 'Restaure 50 HP' },
+    boost: { name: 'Boost d\'énergie', price: 100, effect: 'energy', value: 20, description: 'Restaure 20 énergie' },
+    arme: { name: 'Arme +10 Force', price: 500, effect: 'force', value: 10, description: '+10 Force permanent' },
+    fruit: { name: 'Fruit du Démon', price: 5000, effect: 'fruit', value: 1, description: 'Fruit aléatoire' }
+  };
+
+  const itemKey = args[1].toLowerCase();
+  const item = shopItems[itemKey];
+
+  if (!item) {
+    return '❌ Article inexistant ! Tape !boutique pour voir la liste.';
+  }
+
+  if (player.berrys < item.price) {
+    return `❌ Pas assez de Berrys !\n\n*Prix:* ${item.price}\n*Tes Berrys:* ${player.berrys}`;
+  }
+
+  player.berrys -= item.price;
+
+  if (item.effect === 'force') {
+    player.attributes.force += item.value;
+  } else if (item.effect === 'energy') {
+    player.energy = Math.min(player.maxEnergy, player.energy + item.value);
+  } else {
+    if (!player.inventory) player.inventory = [];
+    const existing = player.inventory.find(i => i.name === item.name);
+    if (existing) {
+      existing.quantity++;
+    } else {
+      player.inventory.push({ ...item, quantity: 1 });
+    }
+  }
+
+  await updatePlayer(sender, player);
+
+  return `
+✅ *Achat réussi !*
+
+📦 ${item.name}
+💰 -${item.price} Berrys (Reste: ${player.berrys})
+
+${item.effect === 'force' ? `⚡ +${item.value} Force appliqué !` : ''}
+${item.effect === 'energy' ? `⚡ +${item.value} énergie restaurée !` : ''}
+`.trim();
+}
+
+async function handleTravel(args, sender) {
+  const player = await getPlayer(sender);
+  if (!player) return '⚠️ Tu n\'as pas encore de personnage !';
+
+  if (args.length < 2) {
+    return `
+🗺️ *VOYAGER:*
+
+*Zone actuelle:* ${player.currentZone}
+
+*Zones disponibles:*
+${Object.entries(ZONES).map(([key, zone]) => 
+  `• ${key} (Niv. ${zone.minLevel}+) - ${zone.description}`
+).join('\n')}
+
+*Usage:* !voyager [EAST_BLUE/GRAND_LINE/etc]
+`.trim();
+  }
+
+  const zoneKey = args[1].toUpperCase();
+  const zone = ZONES[zoneKey];
+
+  if (!zone) {
+    return '❌ Zone invalide ! Tape !zones pour voir la liste.';
+  }
+
+  if (player.level < zone.minLevel) {
+    return `❌ Niveau ${zone.minLevel} requis pour ${zone.name} !\n\n*Ton niveau:* ${player.level}`;
+  }
+
+  player.currentZone = zoneKey;
+  await updatePlayer(sender, player);
+
+  return `
+✅ *Voyage réussi !*
+
+📍 Tu es maintenant dans: *${zone.name}*
+
+${zone.description}
+⚠️ Niveau de danger: ${zone.dangerLevel}
+`.trim();
+}
+
+async function handleLeaderboard(args) {
+  const allPlayers = await getAllPlayers();
+  const players = Object.values(allPlayers);
+
+  if (players.length === 0) {
+    return '📊 Aucun joueur enregistré !';
+  }
+
+  const type = args[1] || 'level';
+  let sorted = [];
+
+  if (type === 'level') {
+    sorted = players.sort((a, b) => b.level - a.level || b.xp - a.xp);
+  } else if (type === 'berrys') {
+    sorted = players.sort((a, b) => b.berrys - a.berrys);
+  } else if (type === 'bounty') {
+    sorted = players.sort((a, b) => b.bounty - a.bounty);
+  } else {
+    sorted = players.sort((a, b) => b.level - a.level);
+  }
+
+  let board = `
+🏆 *CLASSEMENT* ${type.toUpperCase()} 🏆
+
+`;
+
+  sorted.slice(0, 10).forEach((p, i) => {
+    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
+    const value = type === 'level' ? `Niv.${p.level} (${p.xp} XP)` : 
+                  type === 'berrys' ? `${p.berrys} Berrys` :
+                  `${p.bounty} Berrys`;
+    board += `${medal} *${p.name}* - ${value}\n`;
+  });
+
+  board += `\n*Types:* !classement [level/berrys/bounty]`;
+
+  return board.trim();
+}
+
+async function handleReputation(sender) {
+  const player = await getPlayer(sender);
+  if (!player) return '⚠️ Tu n\'as pas encore de personnage !';
+
+  const repLevel = player.reputation >= 1000 ? 'Légende' :
+                   player.reputation >= 500 ? 'Célèbre' :
+                   player.reputation >= 200 ? 'Connu' :
+                   player.reputation >= 50 ? 'Émergent' : 'Inconnu';
+
+  return `
+👤 *${player.name}*
+
+📊 *Réputation:* ${player.reputation} (${repLevel})
+💀 *Prime:* ${player.bounty} Berrys
+⚖️ *Alignement:* ${player.alignment}
+
+⚔️ *Stats de combat:*
+• Victoires: ${player.combatStats.wins}
+• Défaites: ${player.combatStats.losses}
+• Ratio: ${player.combatStats.wins > 0 ? (player.combatStats.wins / (player.combatStats.wins + player.combatStats.losses) * 100).toFixed(1) : 0}%
+`.trim();
 }
 
 module.exports = {
