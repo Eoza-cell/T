@@ -39,8 +39,15 @@ async function startBot() {
           console.log(qrcode);
         });
         
-        // Sauvegarde en fichier PNG
+        // Sauvegarde en fichier PNG (TOUJOURS mis à jour)
         const qrPath = path.join(__dirname, '../../qr-code.png');
+        
+        // Supprimer l'ancien QR code s'il existe
+        if (await fs.pathExists(qrPath)) {
+          await fs.remove(qrPath);
+        }
+        
+        // Créer le nouveau QR code
         await QRCode.toFile(qrPath, qr, {
           errorCorrectionLevel: 'H',
           type: 'png',
@@ -49,9 +56,10 @@ async function startBot() {
           width: 512
         });
         
-        console.log('\n📱 QR Code sauvegardé dans: qr-code.png');
-        console.log('💡 Télécharge ce fichier et scanne-le avec WhatsApp');
-        console.log('⚠️  ATTENTION: Le QR code expire après quelques secondes\n');
+        const timestamp = new Date().toLocaleTimeString('fr-FR');
+        console.log(`\n📱 QR Code mis à jour: ${timestamp}`);
+        console.log('💡 Le fichier qr-code.png a été actualisé');
+        console.log('🌐 Rafraîchis la page web pour voir le nouveau QR\n');
       } catch (err) {
         console.error('❌ Erreur lors de la création du QR code:', err);
       }

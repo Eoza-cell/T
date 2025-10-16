@@ -20,6 +20,16 @@ app.get('/qr-code', async (req, res) => {
   try {
     const exists = await fs.pathExists(qrPath);
     if (exists) {
+      // Headers pour éviter le cache du navigateur
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.setHeader('Surrogate-Control', 'no-store');
+      
+      // Ajouter un timestamp pour forcer le rechargement
+      const stat = await fs.stat(qrPath);
+      res.setHeader('Last-Modified', stat.mtime.toUTCString());
+      
       res.sendFile(qrPath);
     } else {
       res.status(404).json({ error: 'QR code pas encore généré. Attends quelques secondes...' });

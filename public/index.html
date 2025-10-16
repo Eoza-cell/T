@@ -186,11 +186,19 @@
 
         async function loadQRCode() {
             try {
-                const response = await fetch('/qr-code');
+                // Ajouter un timestamp pour éviter le cache
+                const timestamp = new Date().getTime();
+                const response = await fetch(`/qr-code?t=${timestamp}`);
                 
                 if (response.ok) {
                     const blob = await response.blob();
                     const url = URL.createObjectURL(blob);
+                    
+                    // Révoquer l'ancienne URL pour libérer la mémoire
+                    const oldSrc = document.getElementById('qrCode').src;
+                    if (oldSrc.startsWith('blob:')) {
+                        URL.revokeObjectURL(oldSrc);
+                    }
                     
                     document.getElementById('qrCode').src = url;
                     document.getElementById('qrCode').style.display = 'block';
