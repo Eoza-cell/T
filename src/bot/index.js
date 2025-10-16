@@ -14,8 +14,21 @@ async function startBot() {
   const sock = makeWASocket({
     auth: state,
     logger: pino({ level: 'silent' }),
-    browser: Browsers.ubuntu('Chrome'),
-    generateHighQualityLinkPreview: true
+    browser: Browsers.macOS('Desktop'),
+    printQRInTerminal: false,
+    generateHighQualityLinkPreview: true,
+    syncFullHistory: false,
+    markOnlineOnConnect: true,
+    defaultQueryTimeoutMs: undefined,
+    connectTimeoutMs: 60000,
+    keepAliveIntervalMs: 30000,
+    emitOwnEvents: false,
+    fireInitQueries: true,
+    getMessage: async (key) => {
+      return {
+        conversation: 'hello'
+      }
+    }
   });
 
   sock.ev.on('creds.update', saveCreds);
