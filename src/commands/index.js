@@ -1,18 +1,34 @@
 const { getPlayer, createPlayer, playerExists, spendAttributePoints, updatePlayer, getAllPlayers } = require('../game/playerManager');
 const { giveTrainingXP, getNextLevelInfo } = require('../game/xpSystem');
-const { initCombat, executeAttack, formatCombatStatus, getCombat, getPlayerActiveCombat } = require('../game/combatSystem');
+const { initCombat, executeAttack, formatCombatStatus, getCombat, getPlayerActiveCombat, startArenaCombat, arenaAction } = require('../game/combatSystem');
 const { getEnergyStatus } = require('../game/energySystem');
 const { formatPlayerStats } = require('../utils/helpers');
 const { RACES, ALIGNMENTS, STYLES, METIERS, ZONES } = require('../utils/constants');
 const path = require('path');
 const fs = require('fs-extra');
 
-async function handleCommand(message, sender) {
-  const text = message.trim().toLowerCase();
-  const args = text.split(' ');
-  const command = args[0];
+// Helper function to normalize phone numbers
+function normalizePhoneNumber(number) {
+  if (!number) return null;
+  // Remove non-digit characters and ensure it starts with '91' for India or appropriate country code
+  let normalized = number.replace(/\D/g, '');
+  if (normalized.startsWith('0')) {
+    normalized = '91' + normalized.substring(1); // Assuming India as default if starts with 0
+  } else if (!normalized.startsWith('91')) {
+    normalized = '91' + normalized; // Default to India country code if not present
+  }
+  return normalized + '@s.whatsapp.net';
+}
 
-  switch (command) {
+// Global variables for arena timer
+let currentArena = null;
+let arenaTimer = null;
+
+async function handleCommand(command, sender, sock = null) {
+  const args = command.trim().split(/\s+/);
+  const cmd = args[0].toLowerCase();
+
+  switch (cmd) {
     case '!debug':
       return await handleDebug(sender);
 
@@ -43,6 +59,10 @@ async function handleCommand(message, sender) {
     case '!combat':
     case '!fight':
       return await handleCombat(args, sender);
+
+    case '!arene':
+      const opponentPhone = args[1] ? normalizePhoneNumber(args[1].replace('@', '')) : null;
+      return await handleArena(args, sender, opponentPhone, sock);
 
     case '!attaque':
     case '!attack':
@@ -133,9 +153,13 @@ async function getHelpMessage() {
 !reputation - Réputation & prime
 
 ⚔️ *COMBAT:*
-!combat [@mention] - Défier
-!attaque - Attaquer
-!energie - Voir énergie
+!combat [@mention] - Défier un joueur
+!arene [@mention] - Arène avec timer 5min
+!attaque - Attaquer en combat
+
+📝 *ARÈNE (Format M:)*
+M: [description précise de ton action]
+Exemple: M: Luffy tend son bras droit et lance un Gomu Gomu no Pistol vers le torse de Zoro à 3m
 
 💪 *PROGRESSION:*
 !entrainement [type] - S'entraîner
@@ -365,6 +389,102 @@ async function handleCombat(args, sender) {
   return '⚠️ Le système de combat PvP nécessite que les deux joueurs soient présents. Pour l\'instant, utilise !entrainement pour progresser.';
 }
 
+async function handleArena(args, sender, opponentPhone, sock) {
+  const player1 = await getPlayer(sender);
+  if (!player1) {
+    return '⚠️ Tu n\'as pas encore de personnage !';
+  }
+
+  if (getPlayerActiveCombat(sender)) {
+    return '⚠️ Tu es déjà en combat ou en arène ! Utilise !attaque pour continuer.';
+  }
+
+  if (!opponentPhone) {
+    return '❌ Mentionne un adversaire ! Exemple: !arene @mention';
+  }
+
+  const player2 = await getPlayer(opponentPhone);
+  if (!player2) {
+    return `⚠️ L'adversaire ${opponentPhone} n'a pas de personnage.`;
+  }
+
+  if (sender === opponentPhone) {
+    return '❌ Tu ne peux pas te défier toi-même !';
+  }
+
+  // Check if opponent is also in combat
+  if (getPlayerActiveCombat(opponentPhone)) {
+    return `⚠️ ${player2.name} est déjà en combat ou en arène !`;
+  }
+
+  // Initiate arena combat
+  const arenaCombat = await startArenaCombat(player1, player2);
+
+  if (!arenaCombat.success) {
+    return `❌ ${arenaCombat.message}`;
+  }
+
+  currentArena = arenaCombat.arena;
+  
+  // Start the 5-minute timer
+  clearTimeout(arenaTimer); // Clear any existing timer
+  arenaTimer = setTimeout(async () => {
+    if (currentArena && !currentArena.finished) {
+      const inactivePlayer = currentArena.turn === currentArena.player1.id ? currentArena.player1 : currentArena.player2;
+      const activePlayer = currentArena.turn === currentArena.player1.id ? currentArena.player2 : currentArena.player1;
+      
+      // Apply penalty: lose turn and 10% energy
+      await updatePlayer(inactivePlayer.id, { energy: Math.max(0, inactivePlayer.energy - 10) });
+      
+      // Send timeout message to both players
+      const timeoutMessage = `
+⏳ Temps écoulé pour ${inactivePlayer.name} !
+⚠️ ${inactivePlayer.name} perd son tour et subit une perte d'énergie.
+⚡ Énergie de ${inactivePlayer.name} : ${inactivePlayer.energy - 10}%
+      `;
+      sock.sendMessage(inactivePlayer.id, { text: timeoutMessage });
+      sock.sendMessage(activePlayer.id, { text: `L'adversaire ${inactivePlayer.name} a perdu son tour.` });
+
+      // Advance turn and reset timer
+      await arenaAction(currentArena.id, activePlayer.id, "timeout"); // Simulate an action to advance turn
+      
+      // Notify players about the next turn
+      const nextPlayer = currentArena.turn === currentArena.player1.id ? currentArena.player1 : currentArena.player2;
+      sock.sendMessage(nextPlayer.id, { text: "🕐 5 minutes pour répondre. Ton tour commence !" });
+      
+      // Reset timer for the new turn
+      clearTimeout(arenaTimer);
+      arenaTimer = setTimeout(async () => {
+        // Handle timeout for the next player
+        if (currentArena && !currentArena.finished) {
+            const nextInactivePlayer = currentArena.turn === currentArena.player1.id ? currentArena.player1 : currentArena.player2;
+            const nextActivePlayer = currentArena.turn === currentArena.player1.id ? currentArena.player2 : currentArena.player1;
+            await updatePlayer(nextInactivePlayer.id, { energy: Math.max(0, nextInactivePlayer.energy - 10) });
+            sock.sendMessage(nextInactivePlayer.id, { text: `⏳ Temps écoulé pour ${nextInactivePlayer.name} ! Tu perds ton tour et 10% d'énergie.` });
+            sock.sendMessage(nextActivePlayer.id, { text: `L'adversaire ${nextInactivePlayer.name} a perdu son tour.` });
+            await arenaAction(currentArena.id, nextActivePlayer.id, "timeout"); // Advance turn
+        }
+      }, 300000); // 5 minutes
+    }
+  }, 300000); // 5 minutes
+
+  // Send challenge message to opponent
+  if (sock) {
+    sock.sendMessage(opponentPhone, { text: `🔥 ${player1.name} te défie dans l'arène ! Utilise !attaque pour commencer le combat.` });
+  }
+
+  return `
+⚔️ *ARÈNE DÉFIÉE !*
+
+${player1.name} vs ${player2.name}
+
+${formatCombatStatus(currentArena, player1, player2)}
+
+${player1.name}, c'est ton tour ! Écris ton action (M: ...). Tu as 5 minutes.
+      `.trim();
+}
+
+
 async function handleAttack(sender) {
   const activeCombat = getPlayerActiveCombat(sender);
 
@@ -372,35 +492,125 @@ async function handleAttack(sender) {
     return '⚠️ Tu n\'es pas en combat ! Utilise !combat [@mention] pour défier quelqu\'un.';
   }
 
-  const result = await executeAttack(activeCombat.combatId, sender);
+  // Check if it's an arena combat
+  if (activeCombat.type === 'arena') {
+    // The player has typed !attaque, so they are performing their action.
+    // We need to parse the message for the action description.
+    // This part is tricky as the original code doesn't specify how !attaque would be used in an arena.
+    // Assuming the player's action is in the message content *after* !attaque.
+    // This needs a more robust message parsing mechanism.
+
+    // For now, let's assume a simplified scenario where !attaque itself triggers the next step
+    // and the actual action is parsed by arenaAction when it receives a message starting with 'M:'
+    
+    // If the player is the current player in the arena combat
+    if (activeCombat.turn === sender) {
+      // Player needs to provide the action starting with "M:"
+      return "Veuillez entrer votre action en commençant par 'M:' (ex: M: J'attaque avec mon épée)";
+    } else {
+      return "Ce n'est pas encore votre tour !";
+    }
+  } else {
+    // Handle regular combat (if implemented separately)
+    const result = await executeAttack(activeCombat.combatId, sender);
+
+    if (!result.success) {
+      return `❌ ${result.message}`;
+    }
+
+    if (result.finished) {
+      return `
+  🏆 *VICTOIRE !*
+
+  ${result.log}
+
+  ${result.winner} remporte le combat !
+  +${result.xpGained} XP
+  +500 Berrys
+  `.trim();
+    }
+
+    const player1 = await getPlayer(activeCombat.combat.player1);
+    const player2 = await getPlayer(activeCombat.combat.player2);
+
+    return `
+  ${result.log}
+
+  ${formatCombatStatus(activeCombat.combat, player1, player2)}
+
+  Utilise !attaque pour continuer le combat !
+  `.trim();
+  }
+}
+
+// Function to handle messages starting with 'M:' during an arena combat
+async function handleArenaMessage(message, sender, sock) {
+  if (!currentArena || currentArena.finished) {
+    return; // Not in an active arena combat
+  }
+
+  if (currentArena.turn !== sender) {
+    sock.sendMessage(sender, { text: "Ce n'est pas encore ton tour !" });
+    return;
+  }
+
+  const actionText = message.substring(message.indexOf("M:") + 2).trim();
+  if (!actionText) {
+    sock.sendMessage(sender, { text: "Veuillez décrire ton action après 'M:'." });
+    return;
+  }
+
+  clearTimeout(arenaTimer); // Stop the timer as the player has responded
+
+  const result = await arenaAction(currentArena.id, sender, actionText);
 
   if (!result.success) {
-    return `❌ ${result.message}`;
+    sock.sendMessage(sender, { text: `⚠️ Action refusée : ${result.message}` });
+    // Restart timer for the same player
+    arenaTimer = setTimeout(async () => {
+        if (currentArena && !currentArena.finished) {
+            const inactivePlayer = currentArena.turn === currentArena.player1.id ? currentArena.player1 : currentArena.player2;
+            const activePlayer = currentArena.turn === currentArena.player1.id ? currentArena.player2 : currentArena.player1;
+            await updatePlayer(inactivePlayer.id, { energy: Math.max(0, inactivePlayer.energy - 10) });
+            sock.sendMessage(inactivePlayer.id, { text: `⏳ Temps écoulé pour ${inactivePlayer.name} ! Tu perds ton tour et 10% d'énergie.` });
+            await arenaAction(currentArena.id, activePlayer.id, "timeout");
+        }
+    }, 300000);
+    return;
   }
+
+  // Send status update to both players
+  const player1 = await getPlayer(currentArena.player1.id);
+  const player2 = await getPlayer(currentArena.player2.id);
+  const combatStatus = formatCombatStatus(currentArena.combat, player1, player2);
+
+  sock.sendMessage(currentArena.player1.id, { text: `\n${result.log}\n${combatStatus}` });
+  sock.sendMessage(currentArena.player2.id, { text: `\n${result.log}\n${combatStatus}` });
 
   if (result.finished) {
-    return `
-🏆 *VICTOIRE !*
-
-${result.log}
-
-${result.winner} remporte le combat !
-+${result.xpGained} XP
-+500 Berrys
-`.trim();
+    clearTimeout(arenaTimer);
+    currentArena.finished = true;
+    currentArena = null; // Reset arena state
+    return;
   }
 
-  const player1 = await getPlayer(activeCombat.combat.player1);
-  const player2 = await getPlayer(activeCombat.combat.player2);
-
-  return `
-${result.log}
-
-${formatCombatStatus(activeCombat.combat, player1, player2)}
-
-Utilise !attaque pour continuer le combat !
-`.trim();
+  // Announce next turn and reset timer
+  const nextPlayer = currentArena.turn === currentArena.player1.id ? currentArena.player1 : currentArena.player2;
+  sock.sendMessage(nextPlayer.id, { text: "🕐 5 minutes pour répondre. Ton tour commence !" });
+  
+  clearTimeout(arenaTimer);
+  arenaTimer = setTimeout(async () => {
+      if (currentArena && !currentArena.finished) {
+          const inactivePlayer = currentArena.turn === currentArena.player1.id ? currentArena.player1 : currentArena.player2;
+          const activePlayer = currentArena.turn === currentArena.player1.id ? currentArena.player2 : currentArena.player1;
+          await updatePlayer(inactivePlayer.id, { energy: Math.max(0, inactivePlayer.energy - 10) });
+          sock.sendMessage(inactivePlayer.id, { text: `⏳ Temps écoulé pour ${inactivePlayer.name} ! Tu perds ton tour et 10% d'énergie.` });
+          sock.sendMessage(activePlayer.id, { text: `L'adversaire ${inactivePlayer.name} a perdu son tour.` });
+          await arenaAction(currentArena.id, activePlayer.id, "timeout");
+      }
+  }, 300000);
 }
+
 
 async function handleEnergy(sender) {
   const energyStatus = await getEnergyStatus(sender);
@@ -855,5 +1065,6 @@ async function handleDebug(sender) {
 }
 
 module.exports = {
-  handleCommand
+  handleCommand,
+  handleArenaMessage // Export this function to be called by the message handler
 };

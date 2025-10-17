@@ -27,7 +27,19 @@ async function handleIncomingMessage(sock, message) {
 
     console.log(`📨 Message reçu de ${actualSender} (normalisé: ${sender}) ${isGroup ? 'dans groupe ' + rawSender : 'en privé'}: ${text}`);
 
-    const response = await handleCommand(text, sender);
+    // Vérifier si c'est une action d'arène (M:)
+    if (text.startsWith('M:') || text.startsWith('m:')) {
+      const { getPlayerArena, executeAction } = require('../game/arenaSystem');
+      const arenaData = getPlayerArena(sender);
+      
+      if (arenaData) {
+        const actionText = text.substring(2).trim();
+        await executeAction(arenaData.arenaId, sender, actionText, sock);
+        return; // Ne pas traiter comme une commande normale
+      }
+    }
+
+    const response = await handleCommand(text, sender, sock);
 
     if (response) {
       if (typeof response === 'object' && response.type === 'media') {
