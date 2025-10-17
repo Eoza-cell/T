@@ -362,7 +362,7 @@ async function handleCombat(args, sender) {
     return '❌ Mentionne un adversaire ! Exemple: !combat @mention';
   }
 
-  return '⚠️ Le système de combat PvP nécessite que les deux joueurs soient présents. Pour l'instant, utilise !entrainement pour progresser.';
+  return '⚠️ Le système de combat PvP nécessite que les deux joueurs soient présents. Pour l\'instant, utilise !entrainement pour progresser.';
 }
 
 async function handleAttack(sender) {
