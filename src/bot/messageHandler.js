@@ -19,10 +19,13 @@ async function handleIncomingMessage(sock, message) {
     const rawSender = message.key.remoteJid;
     const isGroup = rawSender.endsWith('@g.us');
     
+    // Extraire l'ID réel du joueur (participant dans un groupe ou expéditeur direct)
+    const actualSender = isGroup ? message.key.participant : rawSender;
+    
     // Normaliser le numéro pour avoir un identifiant cohérent
-    const sender = normalizePhoneNumber(rawSender);
+    const sender = normalizePhoneNumber(actualSender);
 
-    console.log(`📨 Message reçu de ${rawSender} (normalisé: ${sender}): ${text}`);
+    console.log(`📨 Message reçu de ${actualSender} (normalisé: ${sender}) ${isGroup ? 'dans groupe ' + rawSender : 'en privé'}: ${text}`);
 
     const response = await handleCommand(text, sender);
 
