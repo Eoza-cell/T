@@ -13,6 +13,9 @@ async function handleCommand(message, sender) {
   const command = args[0];
 
   switch (command) {
+    case '!debug':
+      return await handleDebug(sender);
+
     case '!start':
     case '!commencer':
     case '!aide':
@@ -155,6 +158,9 @@ async function getHelpMessage() {
 📚 *INFOS:*
 !races !alignements !styles !metiers
 
+*DEBUG:*
+!debug - Voir les joueurs enregistrés
+
 ━━━━━━━━━━━━━━━━━━━━
 *Exemple:* !creer Luffy HUMAIN PIRATE force
 `.trim();
@@ -207,7 +213,7 @@ force, vitesse, endurance, reflexe, intelligence, precision
   }
 
   if (race === 'HUMAIN' && bonusAttr && !['force', 'vitesse', 'endurance', 'reflexe', 'intelligence', 'precision'].includes(bonusAttr)) {
-    return '❌ Attribut bonus invalide ! Choisis: force, vitesse, endurance, reflexe, intelligence ou precision';
+    return '❌ Attribut bonus invalide ! Choisis: force, vitesse, endurance, reflexe, intelligence, precision';
   }
 
   const result = await createPlayer(sender, name, race, alignment, bonusAttr);
@@ -356,12 +362,12 @@ async function handleCombat(args, sender) {
     return '❌ Mentionne un adversaire ! Exemple: !combat @mention';
   }
 
-  return '⚠️ Le système de combat PvP nécessite que les deux joueurs soient présents. Pour l\'instant, utilise !entrainement pour progresser.';
+  return '⚠️ Le système de combat PvP nécessite que les deux joueurs soient présents. Pour l'instant, utilise !entrainement pour progresser.';
 }
 
 async function handleAttack(sender) {
   const activeCombat = getPlayerActiveCombat(sender);
-  
+
   if (!activeCombat) {
     return '⚠️ Tu n\'es pas en combat ! Utilise !combat [@mention] pour défier quelqu\'un.';
   }
@@ -398,7 +404,7 @@ Utilise !attaque pour continuer le combat !
 
 async function handleEnergy(sender) {
   const energyStatus = await getEnergyStatus(sender);
-  
+
   if (!energyStatus) {
     return '⚠️ Tu n\'as pas encore de personnage !';
   }
@@ -417,7 +423,7 @@ L'énergie se régénère automatiquement toutes les 5 minutes (+10).
 
 async function handleLevelInfo(sender) {
   const info = await getNextLevelInfo(sender);
-  
+
   if (!info) {
     return '⚠️ Tu n\'as pas encore de personnage !';
   }
@@ -445,7 +451,7 @@ ${progressBar} ${info.progress}%
 
 function getRacesList() {
   let list = '🧬 *RACES DISPONIBLES:*\n\n';
-  
+
   Object.entries(RACES).forEach(([key, race]) => {
     list += `*${race.name}*\n${race.description}\n\n`;
   });
@@ -455,7 +461,7 @@ function getRacesList() {
 
 function getAlignmentsList() {
   let list = '⚖️ *ALIGNEMENTS DISPONIBLES:*\n\n';
-  
+
   Object.entries(ALIGNMENTS).forEach(([key, alignment]) => {
     list += `*${alignment.name}*\n${alignment.description}\n\n`;
   });
@@ -465,7 +471,7 @@ function getAlignmentsList() {
 
 function getStylesList() {
   let list = '⚔️ *STYLES DE COMBAT:* (Débloqué au niveau 5)\n\n';
-  
+
   Object.entries(STYLES).forEach(([key, style]) => {
     list += `*${style.name}*\n${style.description}\n\n`;
   });
@@ -475,7 +481,7 @@ function getStylesList() {
 
 function getJobsList() {
   let list = '💼 *MÉTIERS DISPONIBLES:*\n\n';
-  
+
   Object.entries(METIERS).forEach(([key, job]) => {
     list += `*${job.name}* - ${job.salary} Berrys/sem\n${job.description}\n\n`;
   });
@@ -485,7 +491,7 @@ function getJobsList() {
 
 function getZonesList() {
   let list = '🗺️ *ZONES DU MONDE:*\n\n';
-  
+
   Object.entries(ZONES).forEach(([key, zone]) => {
     list += `*${zone.name}* (Niv. ${zone.minLevel}-${zone.maxLevel})\n${zone.description}\n\n`;
   });
@@ -829,6 +835,23 @@ async function handleReputation(sender) {
 • Défaites: ${player.combatStats.losses}
 • Ratio: ${player.combatStats.wins > 0 ? (player.combatStats.wins / (player.combatStats.wins + player.combatStats.losses) * 100).toFixed(1) : 0}%
 `.trim();
+}
+
+async function handleDebug(sender) {
+  const allPlayers = await getAllPlayers();
+  let debugMessage = '--- DEBUG PLAYERS ---';
+
+  if (Object.keys(allPlayers).length === 0) {
+    return 'Aucun joueur enregistré.';
+  }
+
+  for (const playerId in allPlayers) {
+    const player = allPlayers[playerId];
+    debugMessage += `\nID: ${playerId}\nNom: ${player.name}\nLevel: ${player.level}\nZone: ${player.currentZone}\n`;
+  }
+
+  debugMessage += '\n--- END DEBUG ---';
+  return debugMessage;
 }
 
 module.exports = {

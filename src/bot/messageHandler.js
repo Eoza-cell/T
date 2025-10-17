@@ -1,4 +1,5 @@
 const { handleCommand } = require('../commands');
+const { normalizePhoneNumber } = require('../utils/helpers');
 const fs = require('fs-extra');
 
 async function handleIncomingMessage(sock, message) {
@@ -15,38 +16,42 @@ async function handleIncomingMessage(sock, message) {
       return;
     }
 
-    const sender = message.key.remoteJid;
-    const isGroup = sender.endsWith('@g.us');
+    const rawSender = message.key.remoteJid;
+    const isGroup = rawSender.endsWith('@g.us');
+    
+    // Normaliser le numéro pour avoir un identifiant cohérent
+    const sender = normalizePhoneNumber(rawSender);
 
-    console.log(`📨 Message reçu de ${sender}: ${text}`);
+    console.log(`📨 Message reçu de ${rawSender} (normalisé: ${sender}): ${text}`);
 
     const response = await handleCommand(text, sender);
 
     if (response) {
       if (typeof response === 'object' && response.type === 'media') {
         const mediaBuffer = await fs.readFile(response.media);
-        await sock.sendMessage(sender, {
+        await sock.sendMessage(rawSender, {
           video: mediaBuffer,
           caption: response.caption,
           gifPlayback: true,
           mimetype: 'image/gif'
         });
-        console.log(`✅ Média envoyé à ${sender}`);
+        console.log(`✅ Média envoyé à ${rawSender}`);
       } else if (typeof response === 'object' && response.type === 'text') {
-        await sock.sendMessage(sender, { text: response.text });
-        console.log(`✅ Réponse envoyée à ${sender}`);
+        await sock.sendMessage(rawSender, { text: response.text });
+        console.log(`✅ Réponse envoyée à ${rawSender}`);
       } else if (typeof response === 'string') {
-        await sock.sendMessage(sender, { text: response });
-        console.log(`✅ Réponse envoyée à ${sender}`);
+        await sock.sendMessage(rawSender, { text: response });
+        console.log(`✅ Réponse envoyée à ${rawSender}`);
       }
     }
 
   } catch (error) {
     console.error('Erreur lors du traitement du message:', error);
+    console.error('Stack:', error.stack);
     
     try {
       await sock.sendMessage(message.key.remoteJid, { 
-        text: '❌ Une erreur est survenue. Réessaye plus tard.' 
+        text: '❌ Une erreur est survenue. Réessaye plus tard.\n\nDétails: ' + error.message 
       });
     } catch (sendError) {
       console.error('Erreur lors de l\'envoi du message d\'erreur:', sendError);

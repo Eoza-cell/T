@@ -1,3 +1,23 @@
+
+function normalizePhoneNumber(sender) {
+  // Extraire uniquement le numéro de téléphone
+  // Formats possibles: 
+  // - 33612345678@s.whatsapp.net
+  // - 33612345678@g.us (groupes)
+  // - 33612345678
+  
+  if (!sender) return null;
+  
+  // Supprimer le suffixe WhatsApp
+  let number = sender.split('@')[0];
+  
+  // Nettoyer tout ce qui n'est pas un chiffre
+  number = number.replace(/\D/g, '');
+  
+  return number;
+}
+
+
 function calculateAttributeBonus(attribute, type) {
   switch (type) {
     case 'force':
@@ -134,6 +154,7 @@ function generateCombatLog(attacker, defender, damage, action) {
 }
 
 module.exports = {
+  normalizePhoneNumber,
   calculateAttributeBonus,
   getMaxEnergyFromEndurance,
   formatPlayerStats,
