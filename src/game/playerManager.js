@@ -97,6 +97,7 @@ async function createPlayer(phoneNumber, name, race, alignment, bonusAttribute =
       kills: 0
     },
     currentZone: 'EAST_BLUE',
+    lastTraining: 0,
     createdAt: new Date().toISOString()
   };
 

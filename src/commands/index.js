@@ -309,9 +309,11 @@ async function handleAddAttribute(args, sender) {
   }
 
   return `
-${result.message}
+✅ *${points} points ajoutés à ${attribute} !*
 
 *Points restants:* ${result.player.attributePoints}
+
+━━━━━━━━━━━━━━━━━━━━
 
 ${formatPlayerStats(result.player)}
 `.trim();
@@ -358,15 +360,22 @@ async function handleTraining(args, sender) {
 💪 *Entraînement de ${trainingType} terminé !*
 
 ✨ +${result.xpGained} XP
+💰 -${result.costPaid} Berrys
+⚡ -20 Énergie
 `;
 
   if (result.attributeGain) {
-    response += `⚡ ${result.attributeGain}\n`;
+    response += `\n🎁 ${result.attributeGain}`;
   }
 
   if (result.leveledUp) {
-    response += `\n🎉 *NIVEAU SUPÉRIEUR !* Tu es maintenant niveau ${result.newLevel} !`;
+    response += `\n\n🎉 *NIVEAU SUPÉRIEUR !* Tu es maintenant niveau ${result.newLevel} !`;
   }
+
+  // Actualiser la fiche du joueur
+  response += `\n\n${formatPlayerStats(result.player)}`;
+  
+  response += `\n\n⏳ Prochain entraînement dans 1 heure`;
 
   return response.trim();
 }
@@ -751,6 +760,8 @@ ${styleData.description}
 
 *Bonus appliqués:*
 ${Object.entries(styleData.bonus).map(([k, v]) => `• ${k}: ${v > 0 ? '+' : ''}${v}`).join('\n')}
+
+━━━━━━━━━━━━━━━━━━━━
 
 ${formatPlayerStats(player)}
 `.trim();
