@@ -20,10 +20,11 @@ async function handleIncomingMessage(sock, message) {
     // Extraire l'ID réel du joueur (participant dans un groupe ou expéditeur direct)
     const actualSender = isGroup ? message.key.participant : rawSender;
     
-    // UTILISER L'ID BRUT WHATSAPP DIRECTEMENT (pas de normalisation)
+    // UTILISER L'ID BRUT WHATSAPP DIRECTEMENT (format: numero@s.whatsapp.net)
     const sender = actualSender;
 
-    console.log(`📨 Message reçu de ${sender} ${isGroup ? 'dans groupe ' + rawSender : 'en privé'}: ${text}`);
+    console.log(`📨 Message de ${sender} (isGroup: ${isGroup}, raw: ${rawSender})`);
+    console.log(`📝 Texte: ${text}`);
 
     // Vérifier si c'est une action d'arène (M:)
     if (text.startsWith('M:') || text.startsWith('m:')) {

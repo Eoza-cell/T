@@ -1,6 +1,7 @@
 function normalizePhoneNumber(phoneNumber) {
-  // Retourner l'ID WhatsApp tel quel sans modification
-  // Format: 242068963671@s.whatsapp.net
+  // Retourner l'ID WhatsApp EXACTEMENT tel quel
+  // Format attendu: numero@s.whatsapp.net
+  // Aucune modification, aucune normalisation
   return phoneNumber;
 }
 

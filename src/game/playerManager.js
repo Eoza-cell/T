@@ -21,7 +21,11 @@ async function savePlayers(players) {
 
 async function getPlayer(phoneNumber) {
   const players = await loadPlayers();
-  return players[phoneNumber] || null;
+  console.log(`🔍 Recherche joueur avec ID: ${phoneNumber}`);
+  console.log(`📊 IDs disponibles:`, Object.keys(players));
+  const found = players[phoneNumber] || null;
+  console.log(`✅ Joueur trouvé:`, found ? found.name : 'AUCUN');
+  return found;
 }
 
 async function playerExists(phoneNumber) {

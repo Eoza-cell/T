@@ -22,8 +22,9 @@ function normalizePhoneNumber(number) {
 }
 
 
-async function handleCommand(command, sender, sock = null) {
-  const args = command.trim().split(/\s+/);
+async function handleCommand(text, sender, sock = null) {
+  console.log(`🎮 Commande reçue de: ${sender}`);
+  const args = text.trim().split(/\s+/);
   const cmd = args[0].toLowerCase();
 
   switch (cmd) {
@@ -475,7 +476,7 @@ async function handleCombat(args, sender) {
     return '❌ Mentionne un adversaire ! Exemple: !combat @mention';
   }
 
-  return '⚠️ Le système de combat PvP nécessite que les deux joueurs soient présents. Pour l\'instant, utilise !entrainement pour progresser.';
+  return '⚠️ Le système de combat PvP nécessite que les deux joueurs soient présents. Pour l'instant, utilise !entrainement pour progresser.';
 }
 
 async function handleArena(args, sender, opponentPhone, sock) {
