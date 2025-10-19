@@ -20,10 +20,10 @@ async function handleIncomingMessage(sock, message) {
     // Extraire l'ID réel du joueur (participant dans un groupe ou expéditeur direct)
     const actualSender = isGroup ? message.key.participant : rawSender;
     
-    // Normaliser le numéro pour avoir un identifiant cohérent
-    const sender = normalizePhoneNumber(actualSender);
+    // UTILISER L'ID BRUT WHATSAPP DIRECTEMENT (pas de normalisation)
+    const sender = actualSender;
 
-    console.log(`📨 Message reçu de ${actualSender} (normalisé: ${sender}) ${isGroup ? 'dans groupe ' + rawSender : 'en privé'}: ${text}`);
+    console.log(`📨 Message reçu de ${sender} ${isGroup ? 'dans groupe ' + rawSender : 'en privé'}: ${text}`);
 
     // Vérifier si c'est une action d'arène (M:)
     if (text.startsWith('M:') || text.startsWith('m:')) {

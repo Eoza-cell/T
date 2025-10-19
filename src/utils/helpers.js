@@ -1,20 +1,7 @@
-function normalizePhoneNumber(sender) {
-  // Extraire uniquement le numéro de téléphone
-  // Formats possibles: 
-  // - 33612345678@s.whatsapp.net
-  // - 33612345678@g.us (groupes)
-  // - 33612345678
-
-  if (!sender) return null;
-
-  // Enlever @s.whatsapp.net ou @c.us si présent
-  let normalized = sender.replace(/@s\.whatsapp\.net|@c\.us/g, '');
-
-  // Garder seulement les chiffres
-  normalized = normalized.replace(/\D/g, '');
-
-  // Ajouter @s.whatsapp.net à la fin
-  return normalized + '@s.whatsapp.net';
+function normalizePhoneNumber(phoneNumber) {
+  // Retourner l'ID WhatsApp tel quel sans modification
+  // Format: 242068963671@s.whatsapp.net
+  return phoneNumber;
 }
 
 
@@ -153,6 +140,13 @@ function generateCombatLog(attacker, defender, damage, action) {
   return actionLogs[Math.floor(Math.random() * actionLogs.length)];
 }
 
+// Utilisation des variables d'environnement pour la clé API
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+if (!GROQ_API_KEY) {
+  console.error("Erreur: La clé API Groq (GROQ_API_KEY) n'est pas définie dans les variables d'environnement.");
+  // Vous pourriez vouloir arrêter l'exécution ici ou gérer cette erreur autrement
+}
+
 module.exports = {
   normalizePhoneNumber,
   calculateAttributeBonus,
@@ -164,5 +158,6 @@ module.exports = {
   deductBerrys,
   addBerrys,
   formatNumber,
-  generateCombatLog
+  generateCombatLog,
+  GROQ_API_KEY // Exporter la clé API pour qu'elle soit accessible si nécessaire
 };

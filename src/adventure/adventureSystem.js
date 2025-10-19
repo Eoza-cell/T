@@ -3,7 +3,7 @@ const { getPlayer, updatePlayer, addXP } = require('../game/playerManager');
 
 // Configuration Groq
 const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY || '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'
+  apiKey: process.env.GROQ_API_KEY
 });
 
 const activeAdventures = new Map();
