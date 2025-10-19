@@ -1,20 +1,20 @@
-
 function normalizePhoneNumber(sender) {
   // Extraire uniquement le numéro de téléphone
   // Formats possibles: 
   // - 33612345678@s.whatsapp.net
   // - 33612345678@g.us (groupes)
   // - 33612345678
-  
+
   if (!sender) return null;
-  
-  // Supprimer le suffixe WhatsApp
-  let number = sender.split('@')[0];
-  
-  // Nettoyer tout ce qui n'est pas un chiffre
-  number = number.replace(/\D/g, '');
-  
-  return number;
+
+  // Enlever @s.whatsapp.net ou @c.us si présent
+  let normalized = sender.replace(/@s\.whatsapp\.net|@c\.us/g, '');
+
+  // Garder seulement les chiffres
+  normalized = normalized.replace(/\D/g, '');
+
+  // Ajouter @s.whatsapp.net à la fin
+  return normalized + '@s.whatsapp.net';
 }
 
 
@@ -148,7 +148,7 @@ function generateCombatLog(attacker, defender, damage, action) {
       `⚡ FRAPPE MORTELLE ! ${attacker.name} inflige des dégâts massifs ! (-${damage} PV)`
     ]
   };
-  
+
   const actionLogs = logs[action] || logs.attack;
   return actionLogs[Math.floor(Math.random() * actionLogs.length)];
 }

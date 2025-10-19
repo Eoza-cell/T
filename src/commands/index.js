@@ -3,20 +3,18 @@ const { giveTrainingXP, getNextLevelInfo } = require('../game/xpSystem');
 const { initCombat, executeAttack, formatCombatStatus, getCombat, getPlayerActiveCombat, startArenaCombat, arenaAction } = require('../game/combatSystem');
 const { getEnergyStatus } = require('../game/energySystem');
 const { formatPlayerStats } = require('../utils/helpers');
-const { RACES, ALIGNMENTS, STYLES, METIERS, ZONES } = require('../utils/constants');
+const { RACES, ALIGNMENTS, STYLES, METIERS, ZONES, DEVIL_FRUITS } = require('../utils/constants');
 const path = require('path');
 const fs = require('fs-extra');
 
 // Helper function to normalize phone numbers
 function normalizePhoneNumber(number) {
   if (!number) return null;
-  // Remove non-digit characters and ensure it starts with '91' for India or appropriate country code
-  let normalized = number.replace(/\D/g, '');
-  if (normalized.startsWith('0')) {
-    normalized = '91' + normalized.substring(1); // Assuming India as default if starts with 0
-  } else if (!normalized.startsWith('91')) {
-    normalized = '91' + normalized; // Default to India country code if not present
-  }
+  
+  // Enlever @s.whatsapp.net, @c.us et tous les caractères non-numériques
+  let normalized = number.replace(/@s\.whatsapp\.net|@c\.us/g, '').replace(/\D/g, '');
+  
+  // Retourner avec le format WhatsApp
   return normalized + '@s.whatsapp.net';
 }
 
@@ -61,7 +59,12 @@ async function handleCommand(command, sender, sock = null) {
       return await handleCombat(args, sender);
 
     case '!arene':
-      const opponentPhone = args[1] ? normalizePhoneNumber(args[1].replace('@', '')) : null;
+      // Extraire le numéro mentionné dans le message
+      let opponentPhone = null;
+      if (args[1]) {
+        // Si c'est une mention @12345678, extraire le numéro
+        opponentPhone = normalizePhoneNumber(args[1]);
+      }
       return await handleArena(args, sender, opponentPhone, sock);
 
     case '!attaque':
@@ -893,11 +896,59 @@ async function handleShop(args, sender) {
   const player = await getPlayer(sender);
   if (!player) return '⚠️ Tu n\'as pas encore de personnage !';
 
+  if (args.length > 1 && args[1].toLowerCase() === 'fruits') {
+    // Boutique des fruits du démon
+    let fruitShop = `
+🍎 *BOUTIQUE DES FRUITS DU DÉMON* 🍎
+
+💰 *Tes Berrys:* ${player.berrys}
+⚠️ Tu as déjà un fruit: ${player.fruit || 'Aucun'}
+
+*FRUITS DISPONIBLES:*
+
+`;
+
+    // Grouper par rareté
+    const byRarity = {
+      commun: [],
+      rare: [],
+      tres_rare: [],
+      mythique: [],
+      legendaire: []
+    };
+
+    Object.entries(DEVIL_FRUITS).forEach(([key, fruit]) => {
+      byRarity[fruit.rarity].push({ key, ...fruit });
+    });
+
+    Object.entries(byRarity).forEach(([rarity, fruits]) => {
+      if (fruits.length > 0) {
+        const rarityEmoji = {
+          commun: '⚪',
+          rare: '🔵',
+          tres_rare: '🟣',
+          mythique: '🟡',
+          legendaire: '🔴'
+        };
+        fruitShop += `\n${rarityEmoji[rarity]} *${rarity.toUpperCase()}*\n`;
+        fruits.forEach(fruit => {
+          fruitShop += `  • ${fruit.name} (${fruit.type})\n`;
+          fruitShop += `    💰 ${fruit.price} Berrys\n`;
+          fruitShop += `    ${fruit.description}\n`;
+          fruitShop += `    !acheter ${fruit.key.toLowerCase()}\n\n`;
+        });
+      }
+    });
+
+    fruitShop += `\n*Usage:* !acheter [nom_fruit]\n*Exemple:* !acheter gomu_gomu`;
+
+    return fruitShop.trim();
+  }
+
   const shopItems = {
     potion: { name: 'Potion de soin', price: 50, effect: '+50 HP', description: 'Restaure 50 HP' },
     boost: { name: 'Boost d\'énergie', price: 100, effect: '+20 énergie', description: 'Restaure 20 énergie' },
-    arme: { name: 'Arme +10 Force', price: 500, effect: '+10 Force', description: 'Augmente Force de 10' },
-    fruit: { name: 'Fruit du Démon (aléatoire)', price: 5000, effect: 'Pouvoir', description: 'Fruit aléatoire' }
+    arme: { name: 'Arme +10 Force', price: 500, effect: '+10 Force', description: 'Augmente Force de 10' }
   };
 
   let shop = `
@@ -913,6 +964,8 @@ async function handleShop(args, sender) {
     shop += `📦 *${item.name}* - ${item.price} Berrys\n   ${item.description}\n   !acheter ${key}\n\n`;
   });
 
+  shop += `\n🍎 *FRUITS DU DÉMON*\nTape: !boutique fruits`;
+
   return shop.trim();
 }
 
@@ -924,18 +977,62 @@ async function handleBuy(args, sender) {
     return '❌ Utilise: !acheter [item]\n\nTape !boutique pour voir les articles.';
   }
 
+  const itemKey = args[1].toUpperCase();
+
+  // Vérifier si c'est un fruit du démon
+  if (DEVIL_FRUITS[itemKey]) {
+    const fruit = DEVIL_FRUITS[itemKey];
+
+    if (player.fruit) {
+      return `❌ Tu possèdes déjà le fruit: *${player.fruit}*\n\nOn ne peut manger qu'un seul Fruit du Démon !`;
+    }
+
+    if (player.berrys < fruit.price) {
+      return `❌ Pas assez de Berrys !\n\n*Prix:* ${fruit.price}\n*Tes Berrys:* ${player.berrys}`;
+    }
+
+    player.berrys -= fruit.price;
+    player.fruit = fruit.name;
+
+    // Appliquer les bonus du fruit
+    Object.entries(fruit.bonus).forEach(([attr, value]) => {
+      player.attributes[attr] = (player.attributes[attr] || 0) + value;
+    });
+
+    // Malus pour les fruits (faiblesse à l'eau)
+    player.attributes.endurance -= 10;
+
+    await updatePlayer(sender, player);
+
+    return `
+✅ *FRUIT DU DÉMON ACQUIS !*
+
+🍎 *${fruit.name}*
+📜 Type: ${fruit.type}
+💰 -${fruit.price} Berrys (Reste: ${player.berrys})
+
+*BONUS APPLIQUÉS:*
+${Object.entries(fruit.bonus).map(([k, v]) => `⚡ +${v} ${k}`).join('\n')}
+
+⚠️ *MALUS:* -10 Endurance (faiblesse à l'eau)
+
+${fruit.description}
+
+${formatPlayerStats(player)}
+`.trim();
+  }
+
+  // Articles normaux
   const shopItems = {
     potion: { name: 'Potion de soin', price: 50, effect: 'heal', value: 50, description: 'Restaure 50 HP' },
     boost: { name: 'Boost d\'énergie', price: 100, effect: 'energy', value: 20, description: 'Restaure 20 énergie' },
-    arme: { name: 'Arme +10 Force', price: 500, effect: 'force', value: 10, description: '+10 Force permanent' },
-    fruit: { name: 'Fruit du Démon', price: 5000, effect: 'fruit', value: 1, description: 'Fruit aléatoire' }
+    arme: { name: 'Arme +10 Force', price: 500, effect: 'force', value: 10, description: '+10 Force permanent' }
   };
 
-  const itemKey = args[1].toLowerCase();
-  const item = shopItems[itemKey];
+  const item = shopItems[itemKey.toLowerCase()];
 
   if (!item) {
-    return '❌ Article inexistant ! Tape !boutique pour voir la liste.';
+    return '❌ Article inexistant ! Tape !boutique ou !boutique fruits';
   }
 
   if (player.berrys < item.price) {
