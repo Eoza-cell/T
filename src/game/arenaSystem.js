@@ -81,13 +81,17 @@ function calculateDamage(analysis) {
 }
 
 async function startArenaCombat(player1, player2) {
-  const arenaId = `${player1.phoneNumber}_vs_${player2.phoneNumber}_${Date.now()}`;
+  const player1Id = player1.phoneNumber;
+  const player2Id = player2.phoneNumber;
+  const arenaId = `${player1Id}_vs_${player2Id}_${Date.now()}`;
 
   const arena = {
     id: arenaId,
-    player1: player1.phoneNumber,
-    player2: player2.phoneNumber,
-    turn: player1.phoneNumber,
+    player1Id: player1Id,
+    player2Id: player2Id,
+    player1Name: player1.name,
+    player2Name: player2.name,
+    turn: player1Id,
     round: 1,
     player1Stats: { hp: 100, energy: 100 },
     player2Stats: { hp: 100, energy: 100 },
@@ -107,7 +111,7 @@ async function startArenaCombat(player1, player2) {
 
 function getPlayerArena(phoneNumber) {
   for (const [arenaId, arena] of activeArenas) {
-    if (arena.player1 === phoneNumber || arena.player2 === phoneNumber) {
+    if (arena.player1Id === phoneNumber || arena.player2Id === phoneNumber) {
       return { arenaId, arena };
     }
   }
@@ -132,10 +136,10 @@ async function executeAction(arenaId, phoneNumber, actionText, sock) {
   clearTimeout(playerTimers.get(phoneNumber));
 
   const attacker = await getPlayer(phoneNumber);
-  const defenderPhone = arena.player1 === phoneNumber ? arena.player2 : arena.player1;
+  const defenderPhone = arena.player1Id === phoneNumber ? arena.player2Id : arena.player1Id;
   const defender = await getPlayer(defenderPhone);
 
-  const isPlayer1Attacker = phoneNumber === arena.player1;
+  const isPlayer1Attacker = phoneNumber === arena.player1Id;
   const attackerStats = isPlayer1Attacker ? arena.player1Stats : arena.player2Stats;
   const defenderStats = isPlayer1Attacker ? arena.player2Stats : arena.player1Stats;
 
@@ -202,8 +206,8 @@ ${defender.name} est K.O. !
 +500 Berrys
 `.trim();
 
-    await sock.sendMessage(arena.player1, { text: victoryMsg });
-    await sock.sendMessage(arena.player2, { text: victoryMsg });
+    await sock.sendMessage(arena.player1Id, { text: victoryMsg });
+    await sock.sendMessage(arena.player2Id, { text: victoryMsg });
 
     activeArenas.delete(arenaId);
     clearTimeout(playerTimers.get(phoneNumber));
@@ -215,12 +219,12 @@ ${defender.name} est K.O. !
   arena.turn = defenderPhone;
   arena.round++;
 
-  const player1 = await getPlayer(arena.player1);
-  const player2 = await getPlayer(arena.player2);
+  const player1 = await getPlayer(arena.player1Id);
+  const player2 = await getPlayer(arena.player2Id);
   const combatStatus = formatArenaStatus(arena, player1, player2);
 
-  await sock.sendMessage(arena.player1, { text: `\n${actionLog}\n\n${combatStatus}` });
-  await sock.sendMessage(arena.player2, { text: `\n${actionLog}\n\n${combatStatus}` });
+  await sock.sendMessage(arena.player1Id, { text: `\n${actionLog}\n\n${combatStatus}` });
+  await sock.sendMessage(arena.player2Id, { text: `\n${actionLog}\n\n${combatStatus}` });
 
   await sock.sendMessage(defenderPhone, { text: "🕐 5 minutes pour répondre. Ton tour commence !" });
 
@@ -261,7 +265,7 @@ ${player2.name}:
 ❤️ ${hp2Bar} (${arena.player2Stats.hp}/100 HP)
 ⚡ ${energy2Bar} (${arena.player2Stats.energy}/100 Énergie)
 
-🎯 Tour de: ${arena.turn === player1.phoneNumber ? player1.name : player2.name}
+🎯 Tour de: ${arena.turn === arena.player1Id ? player1.name : player2.name}
 `.trim();
 }
 

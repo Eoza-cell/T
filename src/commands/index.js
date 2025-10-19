@@ -453,27 +453,29 @@ async function handleArena(args, sender, opponentPhone, sock) {
   clearTimeout(arenaTimer); // Clear any existing timer
   arenaTimer = setTimeout(async () => {
     if (currentArena && !currentArena.finished) {
-      const inactivePlayer = currentArena.turn === currentArena.player1.id ? currentArena.player1 : currentArena.player2;
-      const activePlayer = currentArena.turn === currentArena.player1.id ? currentArena.player2 : currentArena.player1;
+      const inactivePlayerId = currentArena.turn;
+      const activePlayerId = currentArena.turn === currentArena.player1Id ? currentArena.player2Id : currentArena.player1Id;
+      const inactivePlayer = await getPlayer(inactivePlayerId);
+      const activePlayer = await getPlayer(activePlayerId);
       
       // Apply penalty: lose turn and 10% energy
-      await updatePlayer(inactivePlayer.id, { energy: Math.max(0, inactivePlayer.energy - 10) });
+      inactivePlayer.energy = Math.max(0, inactivePlayer.energy - 10);
+      await updatePlayer(inactivePlayerId, inactivePlayer);
       
       // Send timeout message to both players
       const timeoutMessage = `
 ⏳ Temps écoulé pour ${inactivePlayer.name} !
 ⚠️ ${inactivePlayer.name} perd son tour et subit une perte d'énergie.
-⚡ Énergie de ${inactivePlayer.name} : ${inactivePlayer.energy - 10}%
+⚡ Énergie de ${inactivePlayer.name} : ${inactivePlayer.energy}%
       `;
-      sock.sendMessage(inactivePlayer.id, { text: timeoutMessage });
-      sock.sendMessage(activePlayer.id, { text: `L'adversaire ${inactivePlayer.name} a perdu son tour.` });
+      sock.sendMessage(inactivePlayerId, { text: timeoutMessage });
+      sock.sendMessage(activePlayerId, { text: `L'adversaire ${inactivePlayer.name} a perdu son tour.` });
 
-      // Advance turn and reset timer
-      await arenaAction(currentArena.id, activePlayer.id, "timeout"); // Simulate an action to advance turn
+      // Change turn
+      currentArena.turn = activePlayerId;
       
       // Notify players about the next turn
-      const nextPlayer = currentArena.turn === currentArena.player1.id ? currentArena.player1 : currentArena.player2;
-      sock.sendMessage(nextPlayer.id, { text: "🕐 5 minutes pour répondre. Ton tour commence !" });
+      sock.sendMessage(activePlayerId, { text: "🕐 5 minutes pour répondre. Ton tour commence !" });
       
       // Reset timer for the new turn
       clearTimeout(arenaTimer);
@@ -496,12 +498,14 @@ async function handleArena(args, sender, opponentPhone, sock) {
     sock.sendMessage(opponentPhone, { text: `🔥 ${player1.name} te défie dans l'arène ! Utilise !attaque pour commencer le combat.` });
   }
 
+  const status = formatArenaStatus(currentArena.arena, player1, player2);
+  
   return `
 ⚔️ *ARÈNE DÉFIÉE !*
 
 ${player1.name} vs ${player2.name}
 
-${formatCombatStatus(currentArena, player1, player2)}
+${status}
 
 ${player1.name}, c'est ton tour ! Écris ton action (M: ...). Tu as 5 minutes.
       `.trim();
