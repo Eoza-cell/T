@@ -1,5 +1,7 @@
 const { handleCommand } = require('../commands');
 const { normalizePhoneNumber } = require('../utils/helpers');
+const { getAdventure } = require('../adventure/adventureSystem');
+const { handlePlayerAction } = require('../commands/adventureHandlers');
 const fs = require('fs-extra');
 
 async function handleIncomingMessage(sock, message) {
@@ -12,10 +14,6 @@ async function handleIncomingMessage(sock, message) {
 
     const text = message.message.conversation || message.message.extendedTextMessage?.text || '';
     
-    if (!text.startsWith('!')) {
-      return;
-    }
-
     const rawSender = message.key.remoteJid;
     const isGroup = rawSender.endsWith('@g.us');
     
@@ -37,6 +35,30 @@ async function handleIncomingMessage(sock, message) {
         await executeAction(arenaData.arenaId, sender, actionText, sock);
         return; // Ne pas traiter comme une commande normale
       }
+    }
+
+    // Vérifier si le joueur est dans une aventure active et que c'est son tour
+    const groupId = isGroup ? rawSender : sender;
+    const adventure = getAdventure(groupId);
+    
+    if (adventure && adventure.active && !text.startsWith('!')) {
+      const currentPlayer = adventure.getCurrentPlayer();
+      
+      if (currentPlayer === sender) {
+        // C'est le tour de ce joueur, traiter le message comme une action RP
+        const actionResult = await handlePlayerAction(groupId, sender, text, sock);
+        
+        if (actionResult) {
+          await sock.sendMessage(rawSender, { text: actionResult });
+        }
+        
+        return; // Ne pas traiter comme une commande normale
+      }
+    }
+
+    // Traiter comme une commande normale
+    if (!text.startsWith('!')) {
+      return; // Ignorer les messages normaux hors aventure
     }
 
     const response = await handleCommand(text, sender, sock);

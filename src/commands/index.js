@@ -5,6 +5,8 @@ const { startArenaCombat, getPlayerArena, executeAction: arenaAction, formatAren
 const { getEnergyStatus } = require('../game/energySystem');
 const { formatPlayerStats } = require('../utils/helpers');
 const { RACES, ALIGNMENTS, STYLES, METIERS, ZONES, DEVIL_FRUITS } = require('../utils/constants');
+const { handleWeaponShop, handleShipShop, handleBuyWeapon, handleBuyShip, handleMyWeapons, handleMyShips, handleEquipWeapon, handleEquipShip } = require('./shopHandlers');
+const { handleStartAdventure, handleJoinAdventure, handleEndAdventure, handleAdventureTurn, handlePlayerAction } = require('./adventureHandlers');
 const path = require('path');
 const fs = require('fs-extra');
 
@@ -141,6 +143,50 @@ async function handleCommand(command, sender, sock = null) {
     case '!backups':
       return await handleListBackups(sender);
 
+    case '!boutiquearmes':
+    case '!weaponshop':
+      return await handleWeaponShop(args, sender);
+
+    case '!boutiquebateaux':
+    case '!shipshop':
+      return await handleShipShop(args, sender);
+
+    case '!achetararme':
+    case '!buyweapon':
+      return await handleBuyWeapon(args, sender);
+
+    case '!acheterb':
+    case '!buyship':
+      return await handleBuyShip(args, sender);
+
+    case '!mesarmes':
+    case '!myweapons':
+      return await handleMyWeapons(sender);
+
+    case '!mesbateaux':
+    case '!myships':
+      return await handleMyShips(sender);
+
+    case '!equipearme':
+    case '!equipweapon':
+      return await handleEquipWeapon(args, sender);
+
+    case '!equipebateau':
+    case '!equipship':
+      return await handleEquipShip(args, sender);
+
+    case '!startma':
+      return await handleStartAdventure(sender, sock);
+
+    case '!joinma':
+      return await handleJoinAdventure(sender, sock);
+
+    case '!endma':
+      return await handleEndAdventure(sender, sock);
+
+    case '!tourma':
+      return await handleAdventureTurn(sender);
+
     default:
       return `❌ Commande inconnue: ${command}
 
@@ -170,6 +216,25 @@ async function getHelpMessage() {
 📝 *ARÈNE (Format M:)*
 M: [description précise de ton action]
 Exemple: M: Luffy tend son bras droit et lance un Gomu Gomu no Pistol vers le torse de Zoro à 3m
+
+🛒 *BOUTIQUES:*
+!boutiquearmes [page] - Voir les armes
+!achetararme [numéro] - Acheter une arme
+!mesarmes - Voir tes armes
+!equipearme [numéro] - Équiper une arme
+
+⛵ *BATEAUX:*
+!boutiquebateaux [page] - Voir les bateaux
+!acheterb [numéro] - Acheter un bateau
+!mesbateaux - Voir ta flotte
+!equipebateau [numéro] - Naviguer avec
+
+🎭 *MODE AVENTURE RP (IA):*
+!startma - Démarrer aventure multi-joueurs
+!joinma - Rejoindre l'aventure
+!tourma - Voir l'ordre des tours
+!endma - Terminer l'aventure
+*Décris simplement ton action quand c'est ton tour !*
 
 💪 *PROGRESSION:*
 !entrainement [type] - S'entraîner

@@ -82,6 +82,10 @@ async function createPlayer(phoneNumber, name, race, alignment, bonusAttribute =
     style: null,
     job: null,
     inventory: [],
+    weapons: [],
+    ships: [],
+    currentWeapon: null,
+    currentShip: null,
     techniques: [],
     haki: {
       observation: false,
