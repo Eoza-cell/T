@@ -144,6 +144,10 @@ async function handleCommand(text, sender, sock = null) {
     case '!backups':
       return await handleListBackups(sender);
 
+    case '!restoreplayer':
+    case '!restaurer':
+      return await handleRestorePlayer(text, sender);
+
     case '!boutiquearmes':
     case '!weaponshop':
       return await handleWeaponShop(args, sender);
@@ -265,6 +269,8 @@ Exemple: M: Luffy tend son bras droit et lance un Gomu Gomu no Pistol vers le to
 !backup - Créer une sauvegarde
 !backups - Liste des sauvegardes
 !restore [fichier] - Restaurer
+!restaurer - Restaurer depuis ta fiche
+(Envoie !restaurer puis colle ta fiche)
 
 ━━━━━━━━━━━━━━━━━━━━
 *Exemple:* !creer Luffy HUMAIN PIRATE force
@@ -1175,6 +1181,179 @@ async function handleListBackups(sender) {
   list += '\n*Pour restaurer:* !restore [nom_fichier]';
 
   return list.trim();
+}
+
+async function handleRestorePlayer(text, sender) {
+  // Extraire les données de la fiche du personnage depuis le message
+  // Le joueur doit envoyer sa dernière fiche complète
+  
+  const lines = text.split('\n');
+  
+  // Chercher les informations clés dans la fiche
+  let playerData = {
+    name: null,
+    race: null,
+    alignment: null,
+    level: null,
+    xp: null,
+    attributes: {},
+    berrys: null,
+    energy: null,
+    maxEnergy: null,
+    style: null,
+    fruit: null,
+    haki: { observation: false, armement: false, royal: false }
+  };
+
+  // Parser la fiche
+  for (let line of lines) {
+    line = line.trim();
+    
+    if (line.includes('👤') && line.includes('Niv.')) {
+      const match = line.match(/👤\s*\*?(.*?)\*?\s*-\s*Niv\.(\d+)/);
+      if (match) {
+        playerData.name = match[1].trim();
+        playerData.level = parseInt(match[2]);
+      }
+    }
+    
+    if (line.includes('Race:')) {
+      const match = line.match(/Race:\s*\*?(.*?)\*?\s*\|/);
+      if (match) playerData.race = match[1].trim();
+    }
+    
+    if (line.includes('Alignement:')) {
+      const match = line.match(/Alignement:\s*\*?(.*?)\*?$/);
+      if (match) playerData.alignment = match[1].trim();
+    }
+    
+    if (line.includes('XP:')) {
+      const match = line.match(/XP:\s*(\d+)/);
+      if (match) playerData.xp = parseInt(match[1]);
+    }
+    
+    if (line.includes('💰')) {
+      const match = line.match(/💰\s*(\d+)\s*Berrys/);
+      if (match) playerData.berrys = parseInt(match[1]);
+    }
+    
+    if (line.includes('⚡')) {
+      const match = line.match(/⚡\s*(\d+)\/(\d+)/);
+      if (match) {
+        playerData.energy = parseInt(match[1]);
+        playerData.maxEnergy = parseInt(match[2]);
+      }
+    }
+    
+    if (line.includes('Force:')) {
+      const match = line.match(/Force:\s*(\d+)/);
+      if (match) playerData.attributes.force = parseInt(match[1]);
+    }
+    
+    if (line.includes('Vitesse:')) {
+      const match = line.match(/Vitesse:\s*(\d+)/);
+      if (match) playerData.attributes.vitesse = parseInt(match[1]);
+    }
+    
+    if (line.includes('Endurance:')) {
+      const match = line.match(/Endurance:\s*(-?\d+)/);
+      if (match) playerData.attributes.endurance = parseInt(match[1]);
+    }
+    
+    if (line.includes('Réflexe:')) {
+      const match = line.match(/Réflexe:\s*(\d+)/);
+      if (match) playerData.attributes.reflexe = parseInt(match[1]);
+    }
+    
+    if (line.includes('Intelligence:')) {
+      const match = line.match(/Intelligence:\s*(\d+)/);
+      if (match) playerData.attributes.intelligence = parseInt(match[1]);
+    }
+    
+    if (line.includes('Précision:')) {
+      const match = line.match(/Précision:\s*(\d+)/);
+      if (match) playerData.attributes.precision = parseInt(match[1]);
+    }
+    
+    if (line.includes('Style:')) {
+      const match = line.match(/Style:\s*\*?(.*?)\*?$/);
+      if (match && match[1] !== 'Aucun') playerData.style = match[1].trim();
+    }
+    
+    if (line.includes('Fruit:')) {
+      const match = line.match(/Fruit:\s*\*?(.*?)\*?$/);
+      if (match && match[1] !== 'Aucun') playerData.fruit = match[1].trim();
+    }
+    
+    if (line.includes('Haki:')) {
+      if (line.includes('Observation') && line.includes('✅')) playerData.haki.observation = true;
+      if (line.includes('Armement') && line.includes('✅')) playerData.haki.armement = true;
+      if (line.includes('Royal') && line.includes('✅')) playerData.haki.royal = true;
+    }
+  }
+
+  // Vérifier que les données minimales sont présentes
+  if (!playerData.name || !playerData.race || !playerData.alignment) {
+    return `❌ Fiche invalide ! Envoie ta fiche complète avec la commande:\n\n!restaurer\n[colle ta fiche ici]\n\nExemple:\n!restaurer\n👤 *Luffy* - Niv.5\n🧬 Race: Humain | ⚖️ Alignement: Pirate\netc...`;
+  }
+
+  // Créer/mettre à jour le joueur avec les données restaurées
+  const players = await loadPlayers();
+  
+  const restoredPlayer = {
+    phoneNumber: sender,
+    name: playerData.name,
+    race: playerData.race,
+    alignment: playerData.alignment,
+    level: playerData.level || 1,
+    xp: playerData.xp || 0,
+    attributes: {
+      force: playerData.attributes.force || 5,
+      vitesse: playerData.attributes.vitesse || 5,
+      endurance: playerData.attributes.endurance || 5,
+      reflexe: playerData.attributes.reflexe || 5,
+      intelligence: playerData.attributes.intelligence || 5,
+      precision: playerData.attributes.precision || 5
+    },
+    attributePoints: 0,
+    energy: playerData.energy || 100,
+    maxEnergy: playerData.maxEnergy || 100,
+    berrys: playerData.berrys || 1000,
+    style: playerData.style || null,
+    job: null,
+    inventory: [],
+    weapons: [],
+    ships: [],
+    currentWeapon: null,
+    currentShip: null,
+    techniques: [],
+    haki: playerData.haki,
+    fruit: playerData.fruit || null,
+    reputation: 0,
+    bounty: 0,
+    combatStats: {
+      wins: 0,
+      losses: 0,
+      kills: 0
+    },
+    currentZone: 'EAST_BLUE',
+    lastTraining: 0,
+    createdAt: new Date().toISOString()
+  };
+
+  players[sender] = restoredPlayer;
+  await savePlayers(players);
+
+  return `
+✅ **PERSONNAGE RESTAURÉ AVEC SUCCÈS !**
+
+${formatPlayerStats(restoredPlayer)}
+
+🎉 Ton personnage **${playerData.name}** a été restauré !
+📊 Toutes tes statistiques ont été récupérées.
+
+⚠️ Note: Inventaire, armes et bateaux non restaurés (nécessite sauvegarde complète)
+`.trim();
 }
 
 module.exports = {
