@@ -102,8 +102,19 @@ async function startBot() {
       console.log('\n📱 Envoie "!aide" sur WhatsApp pour commencer\n');
 
       // Sauvegarde automatique toutes les heures
+      const { createBackup } = require('./utils/backup');
+      
+      // Créer une sauvegarde immédiate au démarrage
+      console.log('💾 Création de la sauvegarde initiale...');
+      await createBackup();
+      
       setInterval(async () => {
-        const { createBackup } = require('../utils/backup');
+        console.log('💾 Création de la sauvegarde automatique...');
+        const result = await createBackup();
+        if (result.success) {
+          console.log('✅ Sauvegarde automatique créée avec succès');
+        }
+      }, 3600000); // Toutes les heures (3600000 ms)uire('../utils/backup');
         await createBackup();
       }, 3600000); // 1 heure
 

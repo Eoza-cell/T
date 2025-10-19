@@ -13,10 +13,10 @@ const fs = require('fs-extra');
 // Helper function to normalize phone numbers
 function normalizePhoneNumber(number) {
   if (!number) return null;
-  
+
   // Enlever @s.whatsapp.net, @c.us et tous les caractères non-numériques
   let normalized = number.replace(/@s\.whatsapp\.net|@c\.us/g, '').replace(/\D/g, '');
-  
+
   // Retourner avec le format WhatsApp
   return normalized + '@s.whatsapp.net';
 }
@@ -454,7 +454,7 @@ async function handleTraining(args, sender) {
 
   // Actualiser la fiche du joueur
   response += `\n\n${formatPlayerStats(result.player)}`;
-  
+
   response += `\n\n⏳ Prochain entraînement dans 1 heure`;
 
   return response.trim();
@@ -514,14 +514,14 @@ async function handleArena(args, sender, opponentPhone, sock) {
   }
 
   const arena = arenaCombat.arena;
-  
+
   // Send challenge message to opponent
   if (sock) {
     sock.sendMessage(opponentPhone, { text: `🔥 ${player1.name} te défie dans l'arène ! Le combat commence. Attends ton tour pour agir.` });
   }
 
   const status = formatArenaStatus(arena, player1, player2);
-  
+
   return `
 ⚔️ *ARÈNE DÉFIÉE !*
 
@@ -1134,11 +1134,11 @@ async function handleDebug(sender) {
 async function handleBackup(args, sender) {
   const { createBackup } = require('../utils/backup');
   const result = await createBackup();
-  
+
   if (result.success) {
     return `✅ **Sauvegarde créée avec succès !**\n\n📁 ${path.basename(result.file)}\n\nUtilise !backups pour voir toutes les sauvegardes.`;
   }
-  
+
   return `❌ Erreur lors de la sauvegarde: ${result.message}`;
 }
 
@@ -1146,33 +1146,33 @@ async function handleRestore(args, sender) {
   const { restoreBackup } = require('../utils/backup');
   const backupName = args[1] || null;
   const result = await restoreBackup(backupName);
-  
+
   if (result.success) {
     return `✅ **Données restaurées avec succès !**\n\n📁 Depuis: ${result.file}\n\nLe bot va redémarrer...`;
   }
-  
+
   return `❌ Erreur lors de la restauration: ${result.message}`;
 }
 
 async function handleListBackups(sender) {
   const { listBackups } = require('../utils/backup');
   const result = await listBackups();
-  
+
   if (!result.success) {
     return `❌ Erreur: ${result.message}`;
   }
-  
+
   if (result.backups.length === 0) {
     return '📦 Aucune sauvegarde disponible.\n\nUtilise !backup pour créer une sauvegarde.';
   }
-  
+
   let list = '📦 **SAUVEGARDES DISPONIBLES:**\n\n';
   result.backups.forEach((backup, i) => {
     list += `${i + 1}. ${backup.name}\n   📅 ${backup.date}\n   📊 ${backup.size}\n\n`;
   });
-  
+
   list += '\n*Pour restaurer:* !restore [nom_fichier]';
-  
+
   return list.trim();
 }
 
