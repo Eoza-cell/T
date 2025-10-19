@@ -32,21 +32,21 @@ async function startBot() {
       console.log('\n╔════════════════════════════════════════╗');
       console.log('║   🔐 QR CODE WHATSAPP DISPONIBLE     ║');
       console.log('╚════════════════════════════════════════╝\n');
-      
+
       try {
         // Affichage dans le terminal
         qrcodeTerminal.generate(qr, { small: true }, (qrcode) => {
           console.log(qrcode);
         });
-        
+
         // Sauvegarde en fichier PNG (TOUJOURS mis à jour)
         const qrPath = path.join(__dirname, '../../qr-code.png');
-        
+
         // Supprimer l'ancien QR code s'il existe
         if (await fs.pathExists(qrPath)) {
           await fs.remove(qrPath);
         }
-        
+
         // Créer le nouveau QR code
         await QRCode.toFile(qrPath, qr, {
           errorCorrectionLevel: 'H',
@@ -55,7 +55,7 @@ async function startBot() {
           margin: 1,
           width: 512
         });
-        
+
         const timestamp = new Date().toLocaleTimeString('fr-FR');
         console.log(`\n📱 QR Code mis à jour: ${timestamp}`);
         console.log('💡 Le fichier qr-code.png a été actualisé');
@@ -68,11 +68,11 @@ async function startBot() {
     if (connection === 'close') {
       const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
       const statusCode = lastDisconnect?.error?.output?.statusCode;
-      
+
       console.log('\n❌ Connexion fermée');
       console.log('📊 Code:', statusCode);
       console.log('📝 Raison:', lastDisconnect?.error?.message);
-      
+
       // Erreur 405 = WhatsApp bloque les connexions cloud
       if (statusCode === 405) {
         console.log('\n╔════════════════════════════════════════════════════╗');
@@ -87,7 +87,7 @@ async function startBot() {
         console.log('║  3. Utilise l\'option SSH de Replit (voir docs)    ║');
         console.log('╚════════════════════════════════════════════════════╝\n');
       }
-      
+
       if (shouldReconnect && statusCode !== 405) {
         console.log('🔄 Reconnexion dans 5 secondes...');
         setTimeout(() => startBot(), 5000);
@@ -100,6 +100,16 @@ async function startBot() {
       console.log('✅ Bot connecté à WhatsApp !');
       console.log('🏴‍☠️ Bot One Piece RPG opérationnel !');
       console.log('\n📱 Envoie "!aide" sur WhatsApp pour commencer\n');
+
+      // Sauvegarde automatique toutes les heures
+      setInterval(async () => {
+        const { createBackup } = require('../utils/backup');
+        await createBackup();
+      }, 3600000); // 1 heure
+
+      // Sauvegarde au démarrage
+      const { createBackup } = require('../utils/backup');
+      await createBackup();
     }
   });
 

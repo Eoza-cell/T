@@ -131,6 +131,15 @@ async function handleCommand(command, sender, sock = null) {
     case '!bounty':
       return await handleReputation(sender);
 
+    case '!backup':
+      return await handleBackup(args, sender);
+
+    case '!restore':
+      return await handleRestore(args, sender);
+
+    case '!backups':
+      return await handleListBackups(sender);
+
     default:
       return `❌ Commande inconnue: ${command}
 
@@ -184,6 +193,11 @@ Exemple: M: Luffy tend son bras droit et lance un Gomu Gomu no Pistol vers le to
 
 *DEBUG:*
 !debug - Voir les joueurs enregistrés
+
+💾 *SAUVEGARDES:*
+!backup - Créer une sauvegarde
+!backups - Liste des sauvegardes
+!restore [fichier] - Restaurer
 
 ━━━━━━━━━━━━━━━━━━━━
 *Exemple:* !creer Luffy HUMAIN PIRATE force
@@ -1075,7 +1089,52 @@ async function handleDebug(sender) {
   return debugMessage;
 }
 
+async function handleBackup(args, sender) {
+  const { createBackup } = require('../utils/backup');
+  const result = await createBackup();
+  
+  if (result.success) {
+    return `✅ **Sauvegarde créée avec succès !**\n\n📁 ${path.basename(result.file)}\n\nUtilise !backups pour voir toutes les sauvegardes.`;
+  }
+  
+  return `❌ Erreur lors de la sauvegarde: ${result.message}`;
+}
+
+async function handleRestore(args, sender) {
+  const { restoreBackup } = require('../utils/backup');
+  const backupName = args[1] || null;
+  const result = await restoreBackup(backupName);
+  
+  if (result.success) {
+    return `✅ **Données restaurées avec succès !**\n\n📁 Depuis: ${result.file}\n\nLe bot va redémarrer...`;
+  }
+  
+  return `❌ Erreur lors de la restauration: ${result.message}`;
+}
+
+async function handleListBackups(sender) {
+  const { listBackups } = require('../utils/backup');
+  const result = await listBackups();
+  
+  if (!result.success) {
+    return `❌ Erreur: ${result.message}`;
+  }
+  
+  if (result.backups.length === 0) {
+    return '📦 Aucune sauvegarde disponible.\n\nUtilise !backup pour créer une sauvegarde.';
+  }
+  
+  let list = '📦 **SAUVEGARDES DISPONIBLES:**\n\n';
+  result.backups.forEach((backup, i) => {
+    list += `${i + 1}. ${backup.name}\n   📅 ${backup.date}\n   📊 ${backup.size}\n\n`;
+  });
+  
+  list += '\n*Pour restaurer:* !restore [nom_fichier]';
+  
+  return list.trim();
+}
+
 module.exports = {
   handleCommand,
-  handleArenaMessage // Export this function to be called by the message handler
+  handleArenaMessage
 };
