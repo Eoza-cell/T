@@ -1,10 +1,8 @@
-const Groq = require('groq-sdk');
+const axios = require('axios');
 const { getPlayer, updatePlayer, addXP } = require('../game/playerManager');
 
-// Configuration Groq
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY
-});
+// Configuration Pollinations AI
+const POLLINATIONS_API = 'https://text.pollinations.ai';
 
 const activeAdventures = new Map();
 
@@ -149,17 +147,17 @@ async function generateNarration(adventure, playerAction, playerName) {
 
   const prompt = `Tu es le narrateur d'une aventure One Piece en groupe. Sois créatif, dramatique et parfois humoristique.
 
-Contexte de l'aventure: ${context}
+Contexte: ${context}
 
 Actions récentes:
 ${recentActions}
 
-Action actuelle de ${playerName}: ${playerAction}
+Action de ${playerName}: ${playerAction}
 
-Raconte ce qui se passe en 2-3 phrases maximum. Sois dynamique, ajoute des détails visuels et émotionnels. Parfois ajoute une touche d'humour. Ne pose pas de questions, raconte juste ce qui arrive.`;
+Raconte en 2-3 phrases max ce qui se passe. Sois dynamique avec des détails visuels et émotionnels. Ne pose pas de questions.`;
 
   try {
-    const completion = await groq.chat.completions.create({
+    const response = await axios.post(POLLINATIONS_API, {
       messages: [
         {
           role: 'system',
@@ -170,37 +168,36 @@ Raconte ce qui se passe en 2-3 phrases maximum. Sois dynamique, ajoute des déta
           content: prompt
         }
       ],
-      model: 'llama-3.1-70b-versatile',
+      model: 'openai',
       temperature: 0.8,
       max_tokens: 200
+    }, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
     });
 
-    const narration = completion.choices[0]?.message?.content || 'L\'aventure continue...';
+    const narration = response.data || 'L\'aventure continue...';
     adventure.context = `${context}\n${playerName}: ${playerAction}\nRésultat: ${narration}`;
     
     return narration;
   } catch (error) {
-    console.error('Erreur Groq:', error);
+    console.error('Erreur Pollinations AI:', error.message);
     return `${playerName} ${playerAction}. L'aventure continue avec intensité !`;
   }
 }
 
 async function evaluateActionCoolness(action, playerName) {
-  const prompt = `Évalue le niveau de "coolness" de cette action dans une aventure One Piece sur une échelle de 1 à 10.
+  const prompt = `Évalue la "coolness" de cette action One Piece de 1 à 10.
 
 Action de ${playerName}: ${action}
 
-Critères:
-- Créativité et originalité
-- Épique et spectaculaire
-- Cohérence avec One Piece
-- Risque et audace
-- Impact émotionnel
+Critères: créativité, épique, cohérence One Piece, risque, impact.
 
 Réponds UNIQUEMENT avec un nombre de 1 à 10.`;
 
   try {
-    const completion = await groq.chat.completions.create({
+    const response = await axios.post(POLLINATIONS_API, {
       messages: [
         {
           role: 'system',
@@ -211,16 +208,20 @@ Réponds UNIQUEMENT avec un nombre de 1 à 10.`;
           content: prompt
         }
       ],
-      model: 'llama-3.1-8b-instant',
+      model: 'openai',
       temperature: 0.5,
       max_tokens: 10
+    }, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
     });
 
-    const response = completion.choices[0]?.message?.content || '5';
-    const score = parseInt(response.match(/\d+/)?.[0] || '5');
+    const scoreText = response.data || '5';
+    const score = parseInt(scoreText.match(/\d+/)?.[0] || '5');
     return Math.max(1, Math.min(10, score));
   } catch (error) {
-    console.error('Erreur évaluation:', error);
+    console.error('Erreur évaluation:', error.message);
     return 5;
   }
 }
