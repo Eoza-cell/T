@@ -1209,69 +1209,73 @@ async function handleRestorePlayer(text, sender) {
   for (let line of lines) {
     line = line.trim();
     
-    if (line.includes('👤') && line.includes('Niv.')) {
-      const match = line.match(/👤\s*\*?(.*?)\*?\s*-\s*Niv\.(\d+)/);
+    // Parser le nom et niveau (Format: ⚓ *nom* - Niveau X ou 👤 *nom* - Niv.X)
+    if ((line.includes('⚓') || line.includes('👤')) && (line.includes('Niveau') || line.includes('Niv.'))) {
+      const match = line.match(/[⚓👤]\s*\*?(.*?)\*?\s*-\s*(?:Niveau|Niv\.)\s*(\d+)/);
       if (match) {
         playerData.name = match[1].trim();
         playerData.level = parseInt(match[2]);
       }
     }
     
-    if (line.includes('Race:')) {
-      const match = line.match(/Race:\s*\*?(.*?)\*?\s*\|/);
-      if (match) playerData.race = match[1].trim();
+    // Parser Race et Alignement (Format: 🏴‍☠️ Race: X | Alignement: Y)
+    if (line.includes('Race:') && line.includes('Alignement:')) {
+      const raceMatch = line.match(/Race:\s*([^\|]+)/);
+      const alignMatch = line.match(/Alignement:\s*(.+)$/);
+      if (raceMatch) playerData.race = raceMatch[1].trim();
+      if (alignMatch) playerData.alignment = alignMatch[1].trim();
     }
     
-    if (line.includes('Alignement:')) {
-      const match = line.match(/Alignement:\s*\*?(.*?)\*?$/);
-      if (match) playerData.alignment = match[1].trim();
-    }
-    
-    if (line.includes('XP:')) {
+    if (line.includes('✨') && line.includes('XP:')) {
       const match = line.match(/XP:\s*(\d+)/);
       if (match) playerData.xp = parseInt(match[1]);
     }
     
-    if (line.includes('💰')) {
-      const match = line.match(/💰\s*(\d+)\s*Berrys/);
-      if (match) playerData.berrys = parseInt(match[1]);
+    if (line.includes('💰') && line.includes('Berrys')) {
+      const match = line.match(/💰\s*Berrys:\s*(\d+)/);
+      if (!match) {
+        const altMatch = line.match(/💰\s*(\d+)/);
+        if (altMatch) playerData.berrys = parseInt(altMatch[1]);
+      } else {
+        playerData.berrys = parseInt(match[1]);
+      }
     }
     
-    if (line.includes('⚡')) {
-      const match = line.match(/⚡\s*(\d+)\/(\d+)/);
+    if (line.includes('⚡') && line.includes('Énergie:')) {
+      const match = line.match(/Énergie:\s*(\d+)\/(\d+)/);
       if (match) {
         playerData.energy = parseInt(match[1]);
         playerData.maxEnergy = parseInt(match[2]);
       }
     }
     
-    if (line.includes('Force:')) {
-      const match = line.match(/Force:\s*(\d+)/);
+    if (line.includes('⚡') && line.includes('Force:')) {
+      const match = line.match(/Force:\s*(-?\d+)/);
       if (match) playerData.attributes.force = parseInt(match[1]);
     }
     
-    if (line.includes('Vitesse:')) {
-      const match = line.match(/Vitesse:\s*(\d+)/);
+    if (line.includes('💨') && line.includes('Vitesse:')) {
+      const match = line.match(/Vitesse:\s*(-?\d+)/);
       if (match) playerData.attributes.vitesse = parseInt(match[1]);
     }
     
-    if (line.includes('Endurance:')) {
+    if (line.includes('🛡️') && line.includes('Endurance:')) {
       const match = line.match(/Endurance:\s*(-?\d+)/);
       if (match) playerData.attributes.endurance = parseInt(match[1]);
     }
     
-    if (line.includes('Réflexe:')) {
-      const match = line.match(/Réflexe:\s*(\d+)/);
+    if (line.includes('👁️') && line.includes('Réflexe:')) {
+      const match = line.match(/Réflexe:\s*(-?\d+)/);
       if (match) playerData.attributes.reflexe = parseInt(match[1]);
     }
     
-    if (line.includes('Intelligence:')) {
-      const match = line.match(/Intelligence:\s*(\d+)/);
+    if (line.includes('🧠') && line.includes('Intelligence:')) {
+      const match = line.match(/Intelligence:\s*(-?\d+)/);
       if (match) playerData.attributes.intelligence = parseInt(match[1]);
     }
     
-    if (line.includes('Précision:')) {
-      const match = line.match(/Précision:\s*(\d+)/);
+    if (line.includes('🎯') && line.includes('Précision:')) {
+      const match = line.match(/Précision:\s*(-?\d+)/);
       if (match) playerData.attributes.precision = parseInt(match[1]);
     }
     
